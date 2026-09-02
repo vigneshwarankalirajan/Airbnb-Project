@@ -26,6 +26,28 @@ const fallbackImages = [
   "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1600&q=90",
 ];
 
+const formatApiError = (value) => {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(formatApiError).join(" ");
+  }
+
+  if (value && typeof value === "object") {
+    if (value.msg) {
+      return value.loc
+        ? `${value.loc.at(-1)}: ${value.msg}`
+        : value.msg;
+    }
+
+    return value.message || value.detail || JSON.stringify(value);
+  }
+
+  return value ? String(value) : "Unable to create booking.";
+};
+
 function PropertyDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -252,15 +274,8 @@ function PropertyDetails() {
        * guests
        */
 
-      const query = new URLSearchParams({
-        property_id: id,
-        check_in: checkIn,
-        check_out: checkOut,
-        guests: String(guests),
-      });
-
       const response = await fetch(
-        `${API_URL}/availability/?${query.toString()}`
+        `${API_URL}/property-availability/property/${id}`
       );
 
       if (!response.ok) {
@@ -276,14 +291,22 @@ function PropertyDetails() {
         data
       );
 
-      const available =
-        data?.available ??
-        data?.is_available ??
-        data?.data?.available ??
-        false;
+      const availabilityRecords = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.data)
+          ? data.data
+          : data
+            ? [data]
+            : [];
+
+      const available = availabilityRecords.some((record) =>
+        record?.is_available !== false &&
+        record?.available_from <= checkIn &&
+        record?.available_to >= checkOut
+      );
 
       setAvailability({
-        ...data,
+        records: availabilityRecords,
         available,
       });
 
@@ -451,19 +474,18 @@ function PropertyDetails() {
 
     try {
       const bookingData = {
+        guest_id:
+          Number(localStorage.getItem("guest_id")) || 1,
+        host_id: Number(property?.host_id) || 5,
         property_id: Number(id),
-
         check_in: checkIn,
-
         check_out: checkOut,
-
-        guests: Number(guests),
-
-        total_amount: Number(
-          pricing?.total_amount ||
-            pricing?.total ||
-            0
-        ),
+        guest_count: Number(guests),
+        booking_status: "pending",
+        total_amount: Number(pricing?.total_amount || pricing?.total || 0).toFixed(2),
+        currency: pricing?.currency || "INR",
+        booking_method: "online",
+        special_request: null,
       };
 
       console.log(
@@ -501,8 +523,11 @@ function PropertyDetails() {
           );
 
         throw new Error(
-          errorData?.detail ||
-            `Booking API failed: ${response.status}`
+          formatApiError(
+            errorData?.detail ||
+              errorData?.message ||
+              `Booking API failed: ${response.status}`
+          )
         );
       }
 
@@ -535,10 +560,7 @@ function PropertyDetails() {
         err
       );
 
-      setBookingError(
-        err.message ||
-          "Unable to create booking."
-      );
+      setBookingError(formatApiError(err.message));
     } finally {
       setBookingLoading(false);
     }
@@ -1193,11 +1215,15 @@ function PropertyDetails() {
                   <div className="mt-4 rounded-2xl bg-red-50 p-4">
 
                     <p className="font-bold text-red-700">
-                      Not available
+                      {availability.records?.length
+                        ? "Not available"
+                        : "Availability not configured"}
                     </p>
 
                     <p className="mt-1 text-xs text-red-600">
-                      Please select different dates.
+                      {availability.records?.length
+                        ? "Please select different dates."
+                        : "This property does not have an availability schedule yet."}
                     </p>
 
                   </div>
