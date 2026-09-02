@@ -25,6 +25,16 @@ import {
   createBooking,
 } from "../../api/bookingApi";
 
+const getDefaultBookingDates = () => {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  return {
+    checkIn: today.toISOString().split("T")[0],
+    checkOut: tomorrow.toISOString().split("T")[0],
+  };
+};
 
 function Booking() {
 
@@ -47,6 +57,8 @@ function Booking() {
     Number(id) ||
     Number(property?.id);
 
+  const defaultDates = getDefaultBookingDates();
+
 
   /* ==========================================
      STATE
@@ -55,14 +67,14 @@ function Booking() {
   const [checkIn, setCheckIn] =
     useState(
       location.state?.checkIn ||
-      "2026-09-01"
+      defaultDates.checkIn
     );
 
 
   const [checkOut, setCheckOut] =
     useState(
       location.state?.checkOut ||
-      "2026-09-03"
+      defaultDates.checkOut
     );
 
 
@@ -104,6 +116,19 @@ function Booking() {
 
   const [guestOpen, setGuestOpen] =
     useState(false);
+
+  useEffect(() => {
+    const dates = getDefaultBookingDates();
+
+    setCheckIn(location.state?.checkIn || dates.checkIn);
+    setCheckOut(location.state?.checkOut || dates.checkOut);
+    setGuestCount(Number(location.state?.guestCount || 2));
+    setSpecialRequest("");
+    setPricing(null);
+    setAvailability(null);
+    setError("");
+    setGuestOpen(false);
+  }, [propertyId, location.key]);
 
 
   /* ==========================================
@@ -563,7 +588,7 @@ function Booking() {
 
         guest_count: guestCount,
 
-        booking_status: "pending",
+        booking_status: "confirmed",
 
         total_amount:
           priceDetails.total.toFixed(2),
