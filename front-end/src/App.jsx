@@ -33,7 +33,7 @@ import HostAvailability from "./Pages/BecomeHost/HostAvailability";
 
 import HostAmenities from "./Pages/BecomeHost/HostAmenities";
 import HostPropertyImages from "./Pages/BecomeHost/HostPropertyImages";
-// import ReviewPublish from "./Pages/BecomeHost/ReviewPublish";
+import ReviewPublish from "./Pages/BecomeHost/ReviewPublish";
 
 function App() {
   return (
@@ -200,10 +200,10 @@ function App() {
             REVIEW PUBLISH
         ================================= */}
         
-        {/* <Route
+        <Route
           path="/become-host/review"
           element={<ReviewPublish />}
-        /> */}
+        />
        
 
       </Routes>

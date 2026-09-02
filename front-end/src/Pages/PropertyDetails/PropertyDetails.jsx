@@ -713,7 +713,7 @@ function PropertyDetails() {
             IMAGE GALLERY
         ===================================================== */}
 
-        <div className="grid h-[520px] grid-cols-1 gap-3 overflow-hidden rounded-[32px] md:grid-cols-2">
+        <div className="grid min-h-[320px] gap-2 overflow-hidden rounded-[28px] sm:h-[520px] md:grid-cols-[1.35fr_1fr] md:rounded-[32px]">
 
           <div className="relative overflow-hidden">
 
@@ -730,14 +730,20 @@ function PropertyDetails() {
 
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div
+            className={`grid min-h-0 gap-2 ${
+              images.length === 2
+                ? "grid-cols-1 grid-rows-2"
+                : "grid-cols-2 grid-rows-2"
+            }`}
+          >
 
             {images
               .slice(1, 5)
               .map((image, index) => (
                 <div
                   key={index}
-                  className="overflow-hidden"
+                  className="relative min-h-0 overflow-hidden"
                 >
                   <img
                     src={image}
@@ -746,6 +752,12 @@ function PropertyDetails() {
                     }`}
                     className="h-full w-full object-cover transition duration-700 hover:scale-105"
                   />
+
+                  {index === 3 && images.length > 5 && (
+                    <span className="absolute bottom-4 right-4 rounded-full bg-black/70 px-3 py-1.5 text-xs font-semibold text-white">
+                      +{images.length - 5} more
+                    </span>
+                  )}
                 </div>
               ))}
 

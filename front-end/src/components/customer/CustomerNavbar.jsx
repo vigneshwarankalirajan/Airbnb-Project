@@ -218,7 +218,7 @@ const CustomerNavbar = () => {
     setMenuOpen(false);
     setMobileMenuOpen(false);
 
-    navigate("/property-listing");
+    navigate("/become-host");
   };
 
   // ---------------------------------------------------------

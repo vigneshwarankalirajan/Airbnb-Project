@@ -8,7 +8,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-// import { createPropertyImage } from "../../api/hostApi";
+import { createPropertyImage } from "../../api/hostApi";
 
 function HostPropertyImages() {
   const navigate = useNavigate();

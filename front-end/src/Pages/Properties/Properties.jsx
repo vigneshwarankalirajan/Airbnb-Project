@@ -11,9 +11,12 @@ import {
   Loader2,
   Search,
   RefreshCw,
+  SlidersHorizontal,
+  ChevronDown,
 } from "lucide-react";
 
 import { getProperties } from "../../api/propertiesApi";
+import CustomerNavbar from "../../components/customer/CustomerNavbar";
 
 function Properties() {
   const navigate = useNavigate();
@@ -21,6 +24,9 @@ function Properties() {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedType, setSelectedType] = useState("All stays");
+  const [sortOrder, setSortOrder] = useState("recommended");
 
   // =========================================================
   // LOAD PROPERTIES
@@ -201,6 +207,32 @@ function Properties() {
     );
   };
 
+  const propertyTypes = [
+    "All stays",
+    ...new Set(properties.map((property) => getPropertyType(property))),
+  ];
+
+  const visibleProperties = properties
+    .filter((property) => {
+      const searchValue = `${getPropertyTitle(property)} ${getLocation(property)}`.toLowerCase();
+      const matchesSearch = searchValue.includes(searchTerm.toLowerCase());
+      const matchesType =
+        selectedType === "All stays" || getPropertyType(property) === selectedType;
+
+      return matchesSearch && matchesType;
+    })
+    .sort((firstProperty, secondProperty) => {
+      if (sortOrder === "price-low") {
+        return Number(getPrice(firstProperty)) - Number(getPrice(secondProperty));
+      }
+
+      if (sortOrder === "price-high") {
+        return Number(getPrice(secondProperty)) - Number(getPrice(firstProperty));
+      }
+
+      return 0;
+    });
+
   const getGuests = (property) => {
     return (
       property?.guest_count ||
@@ -318,7 +350,9 @@ function Properties() {
   // =========================================================
 
   return (
-    <div className="min-h-screen bg-[#fafafa]">
+    <div className="min-h-screen bg-[#fcfcfc]">
+
+      <CustomerNavbar />
 
       {/* =====================================================
           HEADER
@@ -326,13 +360,13 @@ function Properties() {
 
       <section className="border-b border-gray-200 bg-white">
 
-        <div className="mx-auto max-w-7xl px-5 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-5 py-9 sm:px-6 lg:px-8">
 
           <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
 
             <div>
 
-              <p className="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-[#123d78]">
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-[#e61e4d]">
                 Explore Stays
               </p>
 
@@ -347,7 +381,7 @@ function Properties() {
 
             </div>
 
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2 rounded-full bg-gray-50 px-4 py-2 text-sm font-medium text-gray-600">
 
               <MapPin size={17} />
 
@@ -372,6 +406,55 @@ function Properties() {
       ===================================================== */}
 
       <main className="mx-auto max-w-7xl px-5 py-10 sm:px-6 lg:px-8">
+
+        <div className="mb-9 flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center">
+
+          <div className="relative min-w-0 flex-1">
+            <Search
+              size={18}
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search by city or property name"
+              className="w-full rounded-xl bg-gray-50 py-3 pl-11 pr-4 text-sm text-gray-900 outline-none transition focus:bg-white focus:ring-2 focus:ring-[#123d78]/20"
+            />
+          </div>
+
+          <div className="flex gap-3 overflow-x-auto px-1 pb-1 sm:pb-0">
+            {propertyTypes.slice(0, 5).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setSelectedType(type)}
+                className={`whitespace-nowrap rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
+                  selectedType === type
+                    ? "border-[#123d78] bg-[#123d78] text-white"
+                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-400"
+                }`}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+
+          <label className="relative flex shrink-0 items-center gap-2 rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-semibold text-gray-700">
+            <SlidersHorizontal size={17} className="text-gray-500" />
+            <select
+              value={sortOrder}
+              onChange={(event) => setSortOrder(event.target.value)}
+              className="appearance-none bg-transparent pr-5 outline-none"
+              aria-label="Sort stays"
+            >
+              <option value="recommended">Recommended</option>
+              <option value="price-low">Price: low to high</option>
+              <option value="price-high">Price: high to low</option>
+            </select>
+            <ChevronDown size={15} className="pointer-events-none absolute right-2 text-gray-400" />
+          </label>
+        </div>
 
         {properties.length === 0 ? (
 
@@ -420,9 +503,18 @@ function Properties() {
           // PROPERTY GRID
           // ===================================================
 
-          <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          visibleProperties.length === 0 ? (
+            <div className="flex min-h-[280px] items-center justify-center rounded-3xl border border-dashed border-gray-300 bg-white px-6 text-center">
+              <div>
+                <Search size={28} className="mx-auto text-gray-400" />
+                <h2 className="mt-4 text-lg font-bold text-gray-900">No stays match your search</h2>
+                <p className="mt-1 text-sm text-gray-500">Try a different city or stay type.</p>
+              </div>
+            </div>
+          ) : (
+          <div className="grid grid-cols-1 gap-x-5 gap-y-11 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 
-            {properties.map((property) => {
+            {visibleProperties.map((property) => {
 
               const propertyId =
                 getPropertyId(property);
@@ -471,7 +563,7 @@ function Properties() {
 
                   {/* IMAGE */}
 
-                  <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-gray-100">
+                  <div className="relative aspect-[1.08/1] overflow-hidden rounded-2xl bg-gray-100 shadow-sm ring-1 ring-black/5">
 
                     <img
                       src={image}
@@ -645,6 +737,7 @@ function Properties() {
             })}
 
           </div>
+          )
 
         )}
 
