@@ -20,11 +20,9 @@ export const getPricingByProperty = (propertyId) => {
 ========================= */
 
 export const getPropertyAvailability = (propertyId) => {
-  return axios.get(`${API_URL}/property-availability/`, {
-    params: {
-      property_id: propertyId,
-    },
-  });
+  return axios.get(
+    `${API_URL}/property-availability/property/${propertyId}`
+  );
 };
 
 

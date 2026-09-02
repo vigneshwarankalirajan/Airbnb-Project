@@ -25,17 +25,6 @@ import {
   createBooking,
 } from "../../api/bookingApi";
 
-const getDefaultBookingDates = () => {
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
-
-  return {
-    checkIn: today.toISOString().split("T")[0],
-    checkOut: tomorrow.toISOString().split("T")[0],
-  };
-};
-
 function Booking() {
 
   const navigate = useNavigate();
@@ -57,24 +46,19 @@ function Booking() {
     Number(id) ||
     Number(property?.id);
 
-  const defaultDates = getDefaultBookingDates();
-
-
   /* ==========================================
      STATE
   ========================================== */
 
   const [checkIn, setCheckIn] =
     useState(
-      location.state?.checkIn ||
-      defaultDates.checkIn
+      location.state?.checkIn || ""
     );
 
 
   const [checkOut, setCheckOut] =
     useState(
-      location.state?.checkOut ||
-      defaultDates.checkOut
+      location.state?.checkOut || ""
     );
 
 
@@ -118,10 +102,8 @@ function Booking() {
     useState(false);
 
   useEffect(() => {
-    const dates = getDefaultBookingDates();
-
-    setCheckIn(location.state?.checkIn || dates.checkIn);
-    setCheckOut(location.state?.checkOut || dates.checkOut);
+    setCheckIn(location.state?.checkIn || "");
+    setCheckOut(location.state?.checkOut || "");
     setGuestCount(Number(location.state?.guestCount || 2));
     setSpecialRequest("");
     setPricing(null);
@@ -355,7 +337,18 @@ function Booking() {
         tax: 0,
         total: 0,
       };
+    }
 
+
+    if (!nights) {
+      return {
+        basePrice: Number(pricing.base_price || 0),
+        cleaningFee: 0,
+        serviceFee: 0,
+        guestFee: 0,
+        tax: 0,
+        total: 0,
+      };
     }
 
 
@@ -376,6 +369,13 @@ function Booking() {
         pricing.service_fee || 0
       );
 
+    const extraGuestFee = Number(
+      pricing.extra_guest_fee ||
+        pricing.additional_guest_fee ||
+        pricing.guest_fee ||
+        Number(pricing.base_price || 0) * 0.1
+    );
+
 
     const taxPercentage =
       Number(
@@ -387,12 +387,18 @@ function Booking() {
       basePrice * nights;
 
 
+    const guestFee =
+      extraGuestFee *
+      Math.max(guestCount - 1, 0) *
+      nights;
+
     const tax =
       (
         (
           stayAmount +
           cleaningFee +
-          serviceFee
+          serviceFee +
+          guestFee
         ) *
         taxPercentage
       ) / 100;
@@ -412,6 +418,7 @@ function Booking() {
       cleaningFee,
 
       serviceFee,
+      guestFee,
 
       tax,
 
@@ -422,6 +429,7 @@ function Booking() {
   }, [
     pricing,
     nights,
+    guestCount,
   ]);
 
 
@@ -1141,6 +1149,17 @@ function Booking() {
 
                   </div>
 
+                  {priceDetails.guestFee > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">
+                        Extra guest fee
+                      </span>
+                      <span>
+                        ₹{formatCurrency(priceDetails.guestFee)}
+                      </span>
+                    </div>
+                  )}
+
 
                   {/* TAX */}
 
@@ -1205,7 +1224,12 @@ function Booking() {
                   }`}
                 >
 
-                  {isDateAvailable ? (
+                  {!checkIn || !checkOut ? (
+                    <>
+                      <CalendarDays size={16} />
+                      Select dates to check availability
+                    </>
+                  ) : isDateAvailable ? (
                     <>
                       <span className="h-2 w-2 rounded-full bg-green-500" />
 
