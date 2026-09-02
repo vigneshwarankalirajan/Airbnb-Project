@@ -40,12 +40,18 @@ const getPropertyAvailability = async (propertyId) => {
   return response.data;
 };
 
-const getPropertyImages = async (propertyId) => {
-  const response = await apiClient.get(
-    `/property-images/${propertyId}`
-  );
+const getPropertyImages = async () => {
+  const response = await apiClient.get("/property-images/");
   return response.data;
 };
+
+const fallbackPropertyImages = [
+  "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1600607688969-a5bfcd646154?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=85",
+];
 
 /* =========================================================
    GENERIC HELPERS
@@ -212,7 +218,8 @@ const getPropertyImage = (property, imageData) => {
     if (nestedImage) return nestedImage;
   }
 
-  return "";
+  const fallbackIndex = Number(getPropertyId(property) || 0) % fallbackPropertyImages.length;
+  return fallbackPropertyImages[fallbackIndex];
 };
 
 /* =========================================================
@@ -442,6 +449,13 @@ const Location = () => {
     setDetailsLoading(true);
 
     const details = {};
+    let allImages = [];
+
+    try {
+      allImages = await getPropertyImages();
+    } catch (error) {
+      console.error("Unable to load property images:", error);
+    }
 
     await Promise.all(
       propertyList.map(async (property) => {
@@ -452,12 +466,16 @@ const Location = () => {
         const [
           pricingResult,
           availabilityResult,
-          imageResult,
         ] = await Promise.allSettled([
           getPricingByProperty(propertyId),
           getPropertyAvailability(propertyId),
-          getPropertyImages(propertyId),
         ]);
+
+        const propertyImages = Array.isArray(allImages)
+          ? allImages.filter(
+              (image) => Number(image?.property_id) === Number(propertyId)
+            )
+          : [];
 
         details[propertyId] = {
           pricing:
@@ -470,10 +488,7 @@ const Location = () => {
               ? availabilityResult.value
               : null,
 
-          images:
-            imageResult.status === "fulfilled"
-              ? imageResult.value
-              : null,
+          images: propertyImages,
         };
 
         console.log(
