@@ -408,6 +408,7 @@ function Booking() {
       stayAmount +
       cleaningFee +
       serviceFee +
+      guestFee +
       tax;
 
 
