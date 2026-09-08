@@ -242,24 +242,11 @@ function Booking() {
       );
 
 
-      let data =
-        response.data;
-
-
-      if (Array.isArray(data)) {
-
-        data =
-          data.find(
-            (item) =>
-              Number(
-                item.property_id
-              ) === propertyId
-          ) ||
-          data[0] ||
-          null;
-
-      }
-
+      const data = Array.isArray(response.data)
+        ? response.data
+        : response.data
+          ? [response.data]
+          : [];
 
       setAvailability(data);
 
@@ -445,29 +432,6 @@ function Booking() {
     }
 
 
-    if (
-      availability.is_available === false
-    ) {
-      return false;
-    }
-
-
-    const availableFrom =
-      availability.available_from
-        ? new Date(
-            availability.available_from
-          )
-        : null;
-
-
-    const availableTo =
-      availability.available_to
-        ? new Date(
-            availability.available_to
-          )
-        : null;
-
-
     const selectedCheckIn =
       new Date(checkIn);
 
@@ -476,26 +440,28 @@ function Booking() {
       new Date(checkOut);
 
 
-    if (
-      availableFrom &&
-      selectedCheckIn < availableFrom
-    ) {
+    if (!(selectedCheckIn < selectedCheckOut)) {
       return false;
     }
 
-
-    if (
-      availableTo &&
-      selectedCheckOut > availableTo
-    ) {
-      return false;
+    if (availability.length === 0) {
+      return true;
     }
 
+    return availability.some((record) => {
+      const availableFrom = record.available_from
+        ? new Date(record.available_from)
+        : null;
+      const availableTo = record.available_to
+        ? new Date(record.available_to)
+        : null;
 
-    return (
-      selectedCheckIn <
-      selectedCheckOut
-    );
+      return (
+        record.is_available !== false &&
+        (!availableFrom || selectedCheckIn >= availableFrom) &&
+        (!availableTo || selectedCheckOut <= availableTo)
+      );
+    });
 
   }, [
     availability,

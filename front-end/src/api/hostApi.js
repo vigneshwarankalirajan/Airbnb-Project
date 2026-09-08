@@ -6,7 +6,7 @@ import apiClient from "./apiClient";
 
 export const createProperty = async (payload) => {
   const response = await apiClient.post(
-    "/api/properties",
+    "/properties/",
     payload
   );
 
@@ -15,7 +15,7 @@ export const createProperty = async (payload) => {
 
 export const getProperty = async (propertyId) => {
   const response = await apiClient.get(
-    `/api/properties/${propertyId}`
+    `/properties/${propertyId}`
   );
 
   return response.data;
@@ -26,7 +26,7 @@ export const updateProperty = async (
   payload
 ) => {
   const response = await apiClient.put(
-    `/api/properties/${propertyId}`,
+    `/properties/${propertyId}`,
     payload
   );
 
@@ -40,7 +40,7 @@ export const updateProperty = async (
 
 export const getAmenities = async () => {
   const response = await apiClient.get(
-    "/api/amenities"
+    "/amenities/"
   );
 
   return response.data;
@@ -48,7 +48,7 @@ export const getAmenities = async () => {
 
 export const addPropertyAmenity = async (payload) => {
   const response = await apiClient.post(
-    "/api/property-amenities",
+    "/property-amenities/",
     payload
   );
 
@@ -62,7 +62,7 @@ export const addPropertyAmenity = async (payload) => {
 
 export const createPropertyImage = async (payload) => {
   const response = await apiClient.post(
-    "/api/property-images",
+    "/property-images/",
     payload
   );
 
@@ -76,7 +76,7 @@ export const createPropertyImage = async (payload) => {
 
 export const createPricing = async (payload) => {
   const response = await apiClient.post(
-    "/api/pricing",
+    "/pricing/",
     payload
   );
 
@@ -90,7 +90,7 @@ export const createPricing = async (payload) => {
 
 export const createAvailability = async (payload) => {
   const response = await apiClient.post(
-    "/api/property-availability",
+    "/property-availability/",
     payload
   );
 

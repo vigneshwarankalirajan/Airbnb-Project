@@ -5,9 +5,9 @@ import {
   MapPin,
   Star,
   Heart,
-  BedDouble,
-  Bath,
-  Users,
+  CalendarCheck,
+  Check,
+  Sparkles,
   Loader2,
   Search,
   RefreshCw,
@@ -16,7 +16,25 @@ import {
 } from "lucide-react";
 
 import { getProperties } from "../../api/propertiesApi";
+import { getPropertyImages } from "../../api/propertyImagesApi";
 import CustomerNavbar from "../../components/customer/CustomerNavbar";
+
+const API_URL = "http://127.0.0.1:8000";
+
+const fallbackPropertyImages = [
+  "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1000&q=80",
+];
 
 function Properties() {
   const navigate = useNavigate();
@@ -27,6 +45,8 @@ function Properties() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("All stays");
   const [sortOrder, setSortOrder] = useState("recommended");
+  const [availabilityByProperty, setAvailabilityByProperty] = useState({});
+  const [imagesByProperty, setImagesByProperty] = useState({});
 
   // =========================================================
   // LOAD PROPERTIES
@@ -85,6 +105,59 @@ function Properties() {
 
       setProperties(propertyList);
 
+      try {
+        const imageResponse = await getPropertyImages();
+        const imageList = Array.isArray(imageResponse)
+          ? imageResponse
+          : imageResponse?.data || imageResponse?.items || [];
+        const imageMap = {};
+
+        imageList
+          .sort((a, b) => Number(a?.display_order || 0) - Number(b?.display_order || 0))
+          .forEach((image) => {
+            const propertyId = image?.property_id;
+            if (propertyId && image?.image_url && !imageMap[propertyId]) {
+              imageMap[propertyId] = image.image_url;
+            }
+          });
+
+        setImagesByProperty(imageMap);
+      } catch (imageError) {
+        console.error("Property images API Error:", imageError);
+      }
+
+      const availabilityEntries = await Promise.all(
+        propertyList.map(async (property) => {
+          const propertyId = property?.id || property?._id || property?.property_id;
+
+          if (!propertyId) {
+            return [];
+          }
+
+          try {
+            const availabilityResponse = await fetch(
+              `${API_URL}/property-availability/property/${propertyId}`
+            );
+            const records = availabilityResponse.ok
+              ? await availabilityResponse.json()
+              : [];
+
+            return [
+              propertyId,
+              Array.isArray(records) && records.some(
+                (record) => record?.is_available !== false
+              ),
+            ];
+          } catch {
+            return [propertyId, false];
+          }
+        })
+      );
+
+      setAvailabilityByProperty(
+        Object.fromEntries(availabilityEntries.filter((entry) => entry.length))
+      );
+
     } catch (error) {
       console.error(
         "Properties API Error:",
@@ -125,7 +198,9 @@ function Properties() {
   };
 
   const getPropertyImage = (property) => {
+    const propertyId = getPropertyId(property);
     const image =
+      imagesByProperty[propertyId] ||
       property?.image ||
       property?.image_url ||
       property?.cover_image ||
@@ -135,7 +210,9 @@ function Properties() {
 
     return (
       image ||
-      "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1000&q=80"
+      fallbackPropertyImages[
+        Math.abs(Number(propertyId) || 0) % fallbackPropertyImages.length
+      ]
     );
   };
 
@@ -191,20 +268,17 @@ function Properties() {
     );
   };
 
-  const getBedrooms = (property) => {
-    return (
-      property?.bedrooms ||
-      property?.number_of_bedrooms ||
-      null
-    );
-  };
+  const getAmenities = (property) => {
+    const amenities = property?.amenities || property?.features || [];
 
-  const getBathrooms = (property) => {
-    return (
-      property?.bathrooms ||
-      property?.number_of_bathrooms ||
-      null
-    );
+    if (Array.isArray(amenities)) {
+      return amenities
+        .map((amenity) => typeof amenity === "string" ? amenity : amenity?.name)
+        .filter(Boolean)
+        .slice(0, 3);
+    }
+
+    return [];
   };
 
   const propertyTypes = [
@@ -232,15 +306,6 @@ function Properties() {
 
       return 0;
     });
-
-  const getGuests = (property) => {
-    return (
-      property?.guest_count ||
-      property?.max_guests ||
-      property?.guests ||
-      null
-    );
-  };
 
   // =========================================================
   // PROPERTY CLICK
@@ -540,14 +605,11 @@ function Properties() {
               const propertyType =
                 getPropertyType(property);
 
-              const bedrooms =
-                getBedrooms(property);
+              const amenities =
+                getAmenities(property);
 
-              const bathrooms =
-                getBathrooms(property);
-
-              const guests =
-                getGuests(property);
+              const isAvailable =
+                availabilityByProperty[propertyId];
 
               return (
                 <article
@@ -563,7 +625,7 @@ function Properties() {
 
                   {/* IMAGE */}
 
-                  <div className="relative aspect-[1.08/1] overflow-hidden rounded-2xl bg-gray-100 shadow-sm ring-1 ring-black/5">
+                  <div className="relative aspect-[1.12/1] overflow-hidden rounded-[22px] bg-gray-100 shadow-sm ring-1 ring-black/5">
 
                     <img
                       src={image}
@@ -577,7 +639,7 @@ function Properties() {
 
                     {/* OVERLAY */}
 
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
 
                     {/* HEART */}
 
@@ -592,7 +654,7 @@ function Properties() {
                           propertyId
                         );
                       }}
-                      className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-sm backdrop-blur transition hover:scale-105 hover:bg-white"
+                      className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow-sm backdrop-blur transition hover:scale-105 hover:bg-white"
                     >
                       <Heart
                         size={18}
@@ -603,7 +665,7 @@ function Properties() {
                     {/* PROPERTY TYPE */}
 
                     {propertyType && (
-                      <div className="absolute bottom-3 left-3 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-gray-800 shadow-sm">
+                      <div className="absolute bottom-3 left-3 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-gray-800 shadow-sm">
                         {propertyType}
                       </div>
                     )}
@@ -612,23 +674,23 @@ function Properties() {
 
                   {/* DETAILS */}
 
-                  <div className="pt-3">
+                  <div className="pt-4">
 
                     {/* TITLE + RATING */}
 
                     <div className="flex items-start justify-between gap-3">
 
-                      <h2 className="line-clamp-1 text-[15px] font-semibold text-gray-900">
+                      <h2 className="line-clamp-1 text-[17px] font-bold tracking-tight text-gray-900">
                         {title}
                       </h2>
 
-                      {rating > 0 && (
-                        <div className="flex shrink-0 items-center gap-1 text-sm">
+                      {rating > 0 ? (
+                        <div className="flex shrink-0 items-center gap-1 rounded-full bg-[#fff7e8] px-2 py-1 text-xs">
 
                           <Star
                             size={14}
                             fill="currentColor"
-                            className="text-gray-900"
+                            className="text-[#c77b18]"
                           />
 
                           <span className="font-medium text-gray-900">
@@ -636,13 +698,17 @@ function Properties() {
                           </span>
 
                         </div>
+                      ) : (
+                        <span className="rounded-full bg-gray-100 px-2 py-1 text-[11px] font-semibold text-gray-500">
+                          New
+                        </span>
                       )}
 
                     </div>
 
                     {/* LOCATION */}
 
-                    <div className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
+                    <div className="mt-2 flex items-center gap-1.5 text-sm text-gray-500">
 
                       <MapPin size={14} />
 
@@ -652,43 +718,36 @@ function Properties() {
 
                     </div>
 
-                    {/* PROPERTY INFO */}
+                    <div className="mt-4 flex min-h-6 flex-wrap items-center gap-2">
+                      {amenities.length > 0 ? amenities.map((amenity) => (
+                        <span
+                          key={amenity}
+                          className="flex items-center gap-1 rounded-full bg-[#f3f6f4] px-2.5 py-1 text-[11px] font-medium text-gray-600"
+                        >
+                          <Check size={12} className="text-[#2f7d65]" />
+                          {amenity}
+                        </span>
+                      )) : (
+                        <span className="flex items-center gap-1 text-xs text-gray-400">
+                          <Sparkles size={13} />
+                          Comfortable essentials
+                        </span>
+                      )}
+                    </div>
 
-                    {(guests ||
-                      bedrooms ||
-                      bathrooms) && (
-
-                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-
-                        {guests && (
-                          <span className="flex items-center gap-1">
-                            <Users size={13} />
-                            {guests} guests
-                          </span>
-                        )}
-
-                        {bedrooms && (
-                          <span className="flex items-center gap-1">
-                            <BedDouble size={13} />
-                            {bedrooms}{" "}
-                            {bedrooms === 1
-                              ? "bedroom"
-                              : "bedrooms"}
-                          </span>
-                        )}
-
-                        {bathrooms && (
-                          <span className="flex items-center gap-1">
-                            <Bath size={13} />
-                            {bathrooms}{" "}
-                            {bathrooms === 1
-                              ? "bath"
-                              : "baths"}
-                          </span>
-                        )}
-
-                      </div>
-                    )}
+                    <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold">
+                      <CalendarCheck
+                        size={15}
+                        className={isAvailable ? "text-[#2f7d65]" : "text-gray-400"}
+                      />
+                      <span className={isAvailable ? "text-[#2f7d65]" : "text-gray-500"}>
+                        {isAvailable === undefined
+                          ? "Checking availability"
+                          : isAvailable
+                            ? "Available to reserve"
+                            : "Dates unavailable"}
+                      </span>
+                    </div>
 
                     {/* PRICE */}
 

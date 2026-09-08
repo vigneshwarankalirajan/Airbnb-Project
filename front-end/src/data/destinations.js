@@ -1,0 +1,102 @@
+export const destinations = [
+  {
+    name: "Chennai",
+    country: "India",
+    aliases: ["chennai", "madras"],
+    image: "https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=1200&q=90",
+    areas: ["Mylapore", "Besant Nagar", "ECR"],
+    highlights: ["Kapaleeshwarar Temple", "Marina Beach", "Fort St. George"],
+  },
+  {
+    name: "Bangalore",
+    country: "India",
+    aliases: ["bangalore", "bengaluru"],
+    image: "/Explore location image/Bangalore Palace.webp",
+    areas: ["Indiranagar", "Koramangala", "Whitefield"],
+    highlights: ["Bangalore Palace", "Lalbagh Botanical Garden", "Nandi Hills"],
+  },
+  {
+    name: "Mumbai",
+    country: "India",
+    aliases: ["mumbai", "bombay"],
+    image: "https://images.unsplash.com/photo-1570168007204-dfb528c6958f?auto=format&fit=crop&w=1200&q=90",
+    areas: ["Colaba", "Bandra", "Andheri"],
+    highlights: ["Gateway of India", "Marine Drive", "Juhu Beach"],
+  },
+  {
+    name: "Delhi",
+    country: "India",
+    aliases: ["delhi", "new delhi"],
+    image: "https://images.unsplash.com/photo-1587474260584-136574528ed5?auto=format&fit=crop&w=1200&q=90",
+    areas: ["Connaught Place", "Hauz Khas", "Saket"],
+    highlights: ["India Gate", "Lotus Temple", "Red Fort"],
+  },
+  {
+    name: "Goa",
+    country: "India",
+    aliases: ["goa", "panaji"],
+    image: "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=1200&q=90",
+    areas: ["Calangute", "Candolim", "Panaji"],
+    highlights: ["Basilica of Bom Jesus", "Dudhsagar Falls", "Baga Beach"],
+  },
+  {
+    name: "Kerala",
+    country: "India",
+    aliases: ["kerala", "kochi", "alleppey", "munnar"],
+    image: "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?auto=format&fit=crop&w=1200&q=90",
+    areas: ["Alleppey", "Munnar", "Kochi"],
+    highlights: ["Sree Padmanabhaswamy Temple", "Kerala Backwaters", "Mattancherry Palace"],
+  },
+  {
+    name: "Bali",
+    country: "Indonesia",
+    aliases: ["bali", "ubud", "kuta", "seminyak"],
+    image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=1200&q=90",
+    areas: ["Ubud", "Seminyak", "Canggu"],
+    highlights: ["Tanah Lot Temple", "Uluwatu Temple", "Tegallalang Rice Terrace"],
+  },
+  {
+    name: "Dubai",
+    country: "United Arab Emirates",
+    aliases: ["dubai"],
+    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1200&q=90",
+    areas: ["Downtown Dubai", "Dubai Marina", "Palm Jumeirah"],
+    highlights: ["Burj Khalifa", "Jumeirah Mosque", "Dubai Creek"],
+  },
+  {
+    name: "Paris",
+    country: "France",
+    aliases: ["paris"],
+    image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=90",
+    areas: ["Le Marais", "Montmartre", "Latin Quarter"],
+    highlights: ["Eiffel Tower", "Louvre Museum", "Notre-Dame Cathedral"],
+  },
+  {
+    name: "London",
+    country: "United Kingdom",
+    aliases: ["london"],
+    image: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1200&q=90",
+    areas: ["Westminster", "Camden", "South Bank"],
+    highlights: ["Big Ben", "Tower Bridge", "Westminster Abbey"],
+  },
+  {
+    name: "New York",
+    country: "United States",
+    aliases: ["new york", "nyc"],
+    image: "https://images.unsplash.com/photo-1485871981521-5b1fd3805eee?auto=format&fit=crop&w=1200&q=90",
+    areas: ["Manhattan", "Brooklyn", "Queens"],
+    highlights: ["Statue of Liberty", "Central Park", "Times Square"],
+  },
+];
+
+export const getDestination = (value) => {
+  const normalized = decodeURIComponent(value || "").trim().toLowerCase();
+  return destinations.find((destination) => destination.aliases.includes(normalized)) || {
+    name: decodeURIComponent(value || "Destination"),
+    country: "Travel destination",
+    aliases: [normalized],
+    image: "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1200&q=90",
+    areas: ["City centre", "Old town", "Local markets"],
+    highlights: ["Local landmarks", "Historic sites", "Cultural attractions"],
+  };
+};

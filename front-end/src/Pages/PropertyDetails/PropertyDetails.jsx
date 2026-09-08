@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Star,
 } from "lucide-react";
+import { getPropertyImages } from "../../api/propertyImagesApi";
 
 import {
   useNavigate,
@@ -57,6 +58,7 @@ function PropertyDetails() {
   // =========================================================
 
   const [property, setProperty] = useState(null);
+  const [propertyImages, setPropertyImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -150,11 +152,37 @@ function PropertyDetails() {
     }
   }, [id]);
 
+  useEffect(() => {
+    if (!id) return;
+
+    getPropertyImages()
+      .then((response) => {
+        const imageList = Array.isArray(response)
+          ? response
+          : response?.data || response?.items || [];
+
+        setPropertyImages(
+          imageList
+            .filter((image) => String(image?.property_id) === String(id))
+            .sort((a, b) => Number(a?.display_order || 0) - Number(b?.display_order || 0))
+            .map((image) => image?.image_url)
+            .filter(Boolean)
+        );
+      })
+      .catch((imageError) => {
+        console.error("Property images API error:", imageError);
+      });
+  }, [id]);
+
   // =========================================================
   // IMAGES
   // =========================================================
 
   const images = useMemo(() => {
+    if (propertyImages.length > 0) {
+      return propertyImages;
+    }
+
     if (
       Array.isArray(property?.images) &&
       property.images.length > 0
@@ -183,7 +211,7 @@ function PropertyDetails() {
     }
 
     return fallbackImages;
-  }, [property]);
+  }, [property, propertyImages]);
 
   // =========================================================
   // AMENITIES
@@ -299,11 +327,13 @@ function PropertyDetails() {
             ? [data]
             : [];
 
-      const available = availabilityRecords.some((record) =>
-        record?.is_available !== false &&
-        record?.available_from <= checkIn &&
-        record?.available_to >= checkOut
-      );
+      const available = availabilityRecords.length === 0
+        ? true
+        : availabilityRecords.some((record) =>
+            record?.is_available !== false &&
+            record?.available_from <= checkIn &&
+            record?.available_to >= checkOut
+          );
 
       setAvailability({
         records: availabilityRecords,

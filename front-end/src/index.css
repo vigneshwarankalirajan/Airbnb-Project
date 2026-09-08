@@ -16,3 +16,110 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   background: #f7f7f7;
 }
+
+:root {
+  --tv-font: "Figtree", Arial, sans-serif;
+  --tv-primary: #000;
+  --tv-accent: #4081ff;
+  --tv-positive: #05a457;
+  --tv-negative: #e3330c;
+  --tv-grey-500: #303030;
+  --tv-grey-400: #535353;
+  --tv-grey-300: #777;
+  --tv-grey-200: #e4e4e4;
+  --tv-grey-100: #f2f2f2;
+  --tv-grey-50: #fbfbfb;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--tv-font);
+}
+
+.host-flow-page {
+  min-height: 100vh;
+  background: var(--tv-grey-50);
+  color: var(--tv-grey-500);
+}
+
+.host-flow-page > header {
+  border-color: var(--tv-grey-200);
+  background: var(--tv-white, #fff);
+}
+
+.host-flow-page > header > div {
+  max-width: 1400px;
+  min-height: 80px;
+}
+
+.host-flow-page main {
+  max-width: 1000px;
+  padding-top: 64px;
+  padding-bottom: 80px;
+}
+
+.host-flow-page main > p:first-child {
+  color: var(--tv-accent);
+  font-size: 12px;
+  letter-spacing: 0.2em;
+}
+
+.host-flow-page main > h1 {
+  color: var(--tv-primary);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.host-flow-page main > p:nth-child(3) {
+  color: var(--tv-grey-400);
+}
+
+.host-flow-page form,
+.host-flow-page main > div.mt-8,
+.host-flow-page main > div.mt-5 {
+  border-color: var(--tv-grey-200);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(48, 48, 48, 0.06);
+}
+
+.host-flow-page label {
+  color: var(--tv-grey-500);
+}
+
+.host-flow-page input:not([type="checkbox"]),
+.host-flow-page select,
+.host-flow-page textarea {
+  border-color: var(--tv-grey-200);
+  border-radius: 10px;
+  color: var(--tv-grey-500);
+  background: #fff;
+}
+
+.host-flow-page input:not([type="checkbox"]):focus,
+.host-flow-page select:focus,
+.host-flow-page textarea:focus {
+  border-color: var(--tv-accent);
+  outline: 2px solid rgba(64, 129, 255, 0.16);
+}
+
+.host-flow-page main button[type="submit"],
+.host-flow-page main > button:last-child {
+  border-radius: 5px;
+  background: var(--tv-accent);
+}
+
+.host-flow-page main button[type="submit"]:hover,
+.host-flow-page main > button:last-child:hover {
+  background: #1a5cdd;
+}
+
+@media (max-width: 640px) {
+  .host-flow-page main {
+    padding-top: 40px;
+    padding-bottom: 48px;
+  }
+}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Home,
   CalendarDays,
@@ -10,13 +11,19 @@ import {
 import { getHostDashboard } from "../../api/hostApi";
 
 function HostDashboard() {
+  const navigate = useNavigate();
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (!localStorage.getItem("token")) {
+      navigate("/login/email", { replace: true });
+      return;
+    }
+
     loadDashboard();
-  }, []);
+  }, [navigate]);
 
   const loadDashboard = async () => {
     try {
@@ -30,6 +37,12 @@ function HostDashboard() {
       setDashboard(data);
     } catch (err) {
       console.error("Host Dashboard Error:", err);
+
+      if (err?.response?.status === 401) {
+        localStorage.removeItem("token");
+        navigate("/login/email", { replace: true });
+        return;
+      }
 
       setError(
         err?.response?.data?.detail ||

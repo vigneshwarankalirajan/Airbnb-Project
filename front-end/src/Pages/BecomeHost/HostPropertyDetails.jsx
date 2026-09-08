@@ -106,7 +106,7 @@ navigate("/become-host/amenities");
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafa]">
+    <div className="host-flow-page min-h-screen bg-[#fafafa]">
 
       <header className="border-b bg-white">
         <div className="mx-auto max-w-5xl px-6 py-5">
@@ -128,9 +128,7 @@ navigate("/become-host/amenities");
 
         <div className="mb-8">
 
-          <p className="text-sm font-bold uppercase tracking-widest text-[#e61e4d]">
-            Step 1
-          </p>
+         
 
           <h1 className="mt-2 text-3xl font-bold text-gray-900">
             Tell us about your property

@@ -43,6 +43,11 @@ function Sidebar() {
       path: "/user-preferences",
       icon: "⚙️",
     },
+    {
+      name: "Platform Operations",
+      path: "/platform-operations",
+      icon: "🧰",
+    },
 
     // Property & Listing
     {
@@ -105,6 +110,7 @@ function Sidebar() {
                 "/role-permissions",
                 "/user-verifications",
                 "/user-preferences",
+                "/platform-operations",
               ].includes(item.path)
             )
             .map((item) => (

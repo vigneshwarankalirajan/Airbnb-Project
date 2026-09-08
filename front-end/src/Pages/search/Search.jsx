@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { getPropertyImages } from "../../api/propertyImagesApi";
 
 import {
   Search as SearchIcon,
@@ -40,6 +41,7 @@ function Search() {
   // =========================================================
 
   const [properties, setProperties] = useState([]);
+  const [imagesByProperty, setImagesByProperty] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -102,6 +104,36 @@ function Search() {
       }
 
       setProperties(propertyList);
+
+      try {
+        const imageResponse = await getPropertyImages();
+        const imageList = Array.isArray(imageResponse)
+          ? imageResponse
+          : imageResponse?.data || imageResponse?.items || [];
+        const imageMap = {};
+
+        imageList
+          .sort(
+            (a, b) =>
+              Number(a?.display_order || 0) -
+              Number(b?.display_order || 0)
+          )
+          .forEach((image) => {
+            const propertyId = image?.property_id;
+
+            if (
+              propertyId &&
+              image?.image_url &&
+              !imageMap[propertyId]
+            ) {
+              imageMap[propertyId] = image.image_url;
+            }
+          });
+
+        setImagesByProperty(imageMap);
+      } catch (imageError) {
+        console.error("Property images API error:", imageError);
+      }
     } catch (err) {
       console.error("Property API error:", err);
 
@@ -141,6 +173,7 @@ function Search() {
         "Property",
 
       image:
+        imagesByProperty[property?.id] ||
         property?.image ||
         property?.image_url ||
         property?.cover_image ||
@@ -173,7 +206,7 @@ function Search() {
 
   const normalizedProperties = useMemo(() => {
     return properties.map(normalizeProperty);
-  }, [properties]);
+  }, [properties, imagesByProperty]);
 
   // =========================================================
   // PROPERTY TYPES

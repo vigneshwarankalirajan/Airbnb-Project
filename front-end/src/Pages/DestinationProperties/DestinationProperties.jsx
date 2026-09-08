@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { useNavigate, useParams } from "react-router-dom";
+import { getDestination } from "../../data/destinations";
 
 const API_URL = "http://127.0.0.1:8000";
 
@@ -28,12 +29,14 @@ function DestinationProperties() {
   const { destination } = useParams();
 
   const cityName = decodeURIComponent(destination || "");
+  const destinationInfo = getDestination(destination);
 
   const [properties, setProperties] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sortBy, setSortBy] = useState("recommended");
+  const [rentalPeriod, setRentalPeriod] = useState("weekend");
 
   // =========================================================
   // FETCH PROPERTIES
@@ -69,9 +72,7 @@ function DestinationProperties() {
           propertyList = data.data;
         }
 
-        const selectedCity = cityName
-          .trim()
-          .toLowerCase();
+        const selectedCities = destinationInfo.aliases;
 
         const filtered = propertyList.filter((property) => {
           const propertyCity = String(
@@ -82,7 +83,7 @@ function DestinationProperties() {
             .trim()
             .toLowerCase();
 
-          return propertyCity === selectedCity;
+          return selectedCities.includes(propertyCity);
         });
 
         setProperties(filtered);
@@ -101,7 +102,7 @@ function DestinationProperties() {
     if (cityName) {
       fetchProperties();
     }
-  }, [cityName]);
+  }, [cityName, destinationInfo.aliases.join("|")]);
 
   // =========================================================
   // IMAGE
@@ -184,6 +185,18 @@ function DestinationProperties() {
 
     return list;
   }, [properties, sortBy]);
+
+  const rentalProperties = useMemo(() => {
+    const taggedProperties = sortedProperties.filter((property) => {
+      const period = String(
+        property?.rental_period || property?.stay_period || ""
+      ).toLowerCase();
+
+      return period === rentalPeriod;
+    });
+
+    return taggedProperties.length > 0 ? taggedProperties : sortedProperties;
+  }, [rentalPeriod, sortedProperties]);
 
   // =========================================================
   // PROPERTY DETAILS
@@ -422,6 +435,60 @@ function DestinationProperties() {
       </section>
 
       {/* =====================================================
+          DESTINATION GUIDE AND RENTAL PERIODS
+      ===================================================== */}
+
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+          <div className="rounded-3xl bg-[#10213f] p-7 text-white">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#ffb4c1]">DESTINATION GUIDE</p>
+            <h2 className="mt-3 text-2xl font-bold">Explore {destinationInfo.name}</h2>
+            <p className="mt-2 text-sm leading-6 text-white/70">Popular areas and famous places to include in your trip.</p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              {destinationInfo.areas.map((area) => (
+                <div key={area} className="rounded-2xl bg-white/10 p-4">
+                  <MapPin size={18} className="text-[#ffb4c1]" />
+                  <p className="mt-3 text-sm font-semibold">{area}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-white p-7 shadow-sm ring-1 ring-gray-200">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#e61e4d]">MUST SEE</p>
+            <h2 className="mt-3 text-2xl font-bold text-gray-900">Famous places & temples</h2>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              {destinationInfo.highlights.map((highlight) => (
+                <div key={highlight} className="overflow-hidden rounded-2xl bg-gray-50">
+                  <img src={destinationInfo.image} alt={highlight} className="h-24 w-full object-cover" />
+                  <p className="p-3 text-sm font-semibold text-gray-800">{highlight}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#e61e4d]">RENTAL STAYS</p>
+            <h2 className="mt-2 text-2xl font-bold text-gray-900">Choose your travel season</h2>
+          </div>
+          <div className="flex flex-wrap gap-2 rounded-2xl bg-gray-100 p-1">
+            {["weekend", "summer", "vacation"].map((period) => (
+              <button
+                key={period}
+                type="button"
+                onClick={() => setRentalPeriod(period)}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold capitalize ${rentalPeriod === period ? "bg-white text-[#123d78] shadow-sm" : "text-gray-500"}`}
+              >
+                {period} rentals
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
           PROPERTY LIST
       ===================================================== */}
 
@@ -508,7 +575,7 @@ function DestinationProperties() {
 
             <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 
-              {sortedProperties.map(
+              {rentalProperties.map(
                 (property, index) => {
 
                   const image =

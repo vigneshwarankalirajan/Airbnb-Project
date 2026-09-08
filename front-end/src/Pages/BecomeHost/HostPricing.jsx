@@ -99,7 +99,7 @@ function Pricing() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafa]">
+    <div className="host-flow-page min-h-screen bg-[#fafafa]">
 
       <header className="border-b bg-white">
         <div className="mx-auto max-w-5xl px-6 py-5">
@@ -119,9 +119,7 @@ function Pricing() {
 
       <main className="mx-auto max-w-3xl px-6 py-10">
 
-        <p className="text-sm font-bold uppercase tracking-widest text-[#e61e4d]">
-          Step 4
-        </p>
+        
 
         <h1 className="mt-2 text-3xl font-bold">
           Set your pricing

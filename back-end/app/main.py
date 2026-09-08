@@ -43,6 +43,7 @@ from app.routers.payment_method import router as payment_method_router
 from app.routers.refund import router as refund_router
 from app.routers.payout_account import router as payout_account_router
 from app.routers.host_wallet import router as host_wallet_router
+from app.routers.host_dashboard import router as host_dashboard_router
 from app.routers.wallet_transaction import router as wallet_transaction_router
 from app.routers.payout import router as payout_router
 from app.routers.finance_transaction import router as finance_transaction_router
@@ -53,6 +54,11 @@ from app.routers.notification import router as notifications_router
 from app.routers.notification_preference import router as notification_preference_router
 from app.routers.email_sms_log import router as email_sms_log_router
 from app.routers.property_availability import  router as property_availability_router
+from app.routers.wishlist import router as wishlist_router
+from app.routers.wishlist_item import router as wishlist_item_router
+from app.routers.review import router as review_router
+from app.routers.user_report import router as user_report_router
+from app.routers.dispute import router as dispute_router
 
 
 
@@ -143,6 +149,7 @@ app.include_router(payment_method_router)
 app.include_router(refund_router)
 app.include_router(payout_account_router)
 app.include_router(host_wallet_router)
+app.include_router(host_dashboard_router)
 app.include_router(wallet_transaction_router)
 app.include_router(payout_router)
 app.include_router(finance_transaction_router)
@@ -153,7 +160,11 @@ app.include_router(notifications_router)
 app.include_router(notification_preference_router)
 app.include_router(email_sms_log_router)
 app.include_router(property_availability_router)
-
+app.include_router(wishlist_router)
+app.include_router(wishlist_item_router)
+app.include_router( review_router)
+app.include_router(user_report_router)
+app.include_router(dispute_router)
 
 
 

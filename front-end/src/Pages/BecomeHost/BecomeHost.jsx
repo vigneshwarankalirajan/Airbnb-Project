@@ -4,6 +4,9 @@ import {
   Home,
   ArrowRight,
   CheckCircle,
+  BadgeCheck,
+  Camera,
+  CalendarDays,
 } from "lucide-react";
 
 function BecomeHost() {
@@ -17,17 +20,17 @@ function BecomeHost() {
   ];
 
   return (
-    <div className="min-h-screen w-full bg-white">
+    <div className="min-h-screen w-full bg-[#fbfbfb] text-[#303030]">
 
       {/* ================= HEADER ================= */}
-      <header className="w-full border-b border-gray-200 bg-white">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
+      <header className="w-full border-b border-[#e4e4e4] bg-white">
+        <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between px-5 py-4 sm:px-8 sm:py-5">
 
           {/* LOGO */}
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="flex shrink-0 items-center gap-2 text-lg font-bold text-[#123d78] transition hover:opacity-80 sm:text-xl"
+            className="flex shrink-0 items-center gap-2 text-lg font-bold text-black transition hover:opacity-70 sm:text-xl"
           >
             <Home
               size={22}
@@ -42,7 +45,7 @@ function BecomeHost() {
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="shrink-0 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 sm:px-5"
+            className="shrink-0 rounded-full border border-[#303030] bg-white px-4 py-2 text-sm font-semibold text-[#303030] transition hover:bg-[#f2f2f2] sm:px-5"
           >
             Exit
           </button>
@@ -53,47 +56,44 @@ function BecomeHost() {
       {/* ================= MAIN ================= */}
       <main className="w-full">
 
-        <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
+        <div className="mx-auto w-full max-w-[1400px] px-5 py-10 sm:px-8 sm:py-16">
 
-          <div className="grid w-full grid-cols-1 items-center gap-8 sm:gap-10 lg:grid-cols-2 lg:gap-16">
+          <div className="mx-auto max-w-[1000px] text-center">
 
             {/* ================= LEFT CONTENT ================= */}
-            <div className="min-w-0 w-full">
+            <div className="w-full">
 
               {/* LABEL */}
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#e61e4d] sm:text-sm">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#4081ff] sm:text-sm">
                 Become a Host
               </p>
 
               {/* TITLE */}
-              <h1 className="mt-3 text-3xl font-bold leading-[1.15] tracking-tight text-gray-900 sm:text-4xl lg:text-5xl">
-                Share your space,
-                <br className="hidden sm:block" />
-                earn from your home
+              <h1 className="mt-3 text-4xl font-semibold leading-[1.08] tracking-tight text-[#101010] sm:text-5xl lg:text-6xl">
+                Turn your space into a stay
               </h1>
 
               {/* DESCRIPTION */}
-              <p className="mt-4 max-w-xl text-base leading-7 text-gray-500 sm:mt-5 sm:text-lg sm:leading-8">
-                List your property and welcome guests
-                from around the world.
+              <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#535353] sm:text-lg">
+                Share a place people will remember and build a flexible source of income from your home.
               </p>
 
               {/* ================= FEATURES ================= */}
-              <div className="mt-6 space-y-4 sm:mt-8">
+              <div className="mx-auto mt-8 grid max-w-3xl grid-cols-1 gap-3 text-left sm:grid-cols-3 sm:gap-4">
 
-                {features.map((item) => (
+                {[
+                  { icon: BadgeCheck, text: "Trusted guests" },
+                  { icon: Camera, text: "Beautiful listing" },
+                  { icon: CalendarDays, text: "Flexible hosting" },
+                ].map(({ icon: Icon, text }) => (
                   <div
-                    key={item}
-                    className="flex w-full items-start gap-3"
+                    key={text}
+                    className="flex items-center gap-3 rounded-[10px] border border-[#e4e4e4] bg-white px-4 py-4 shadow-sm"
                   >
-                    <CheckCircle
-                      size={21}
-                      strokeWidth={2}
-                      className="mt-0.5 shrink-0 text-green-600"
-                    />
+                    <Icon size={20} strokeWidth={1.8} className="shrink-0 text-[#4081ff]" />
 
-                    <span className="min-w-0 text-sm leading-6 text-gray-700 sm:text-base">
-                      {item}
+                    <span className="text-sm font-semibold text-[#303030]">
+                      {text}
                     </span>
                   </div>
                 ))}
@@ -106,7 +106,7 @@ function BecomeHost() {
                 onClick={() =>
                   navigate("/become-host/property")
                 }
-                className="mt-8 flex w-full items-center justify-center gap-3 rounded-xl bg-[#e61e4d] px-6 py-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#d91545] active:scale-[0.99] sm:mt-10 sm:w-fit sm:text-base"
+                className="mx-auto mt-9 flex w-full items-center justify-center gap-3 rounded-[5px] bg-[#4081ff] px-7 py-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1a5cdd] active:scale-[0.99] sm:w-fit sm:text-base"
               >
                 <span>Get started</span>
 
@@ -119,13 +119,15 @@ function BecomeHost() {
 
             </div>
 
-            {/* ================= IMAGE ================= */}
-            <div className="w-full min-w-0 overflow-hidden rounded-2xl bg-gray-100 sm:rounded-3xl">
+          </div>
+
+          {/* ================= IMAGE ================= */}
+          <div className="mx-auto mt-12 max-w-[1100px] overflow-hidden rounded-[20px] bg-gray-100 shadow-sm sm:mt-16">
 
               <img
                 src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85"
                 alt="Become a host"
-                className="block h-64 w-full object-cover sm:h-80 md:h-96 lg:h-[500px]"
+                className="block h-64 w-full object-cover sm:h-[380px] lg:h-[520px]"
                 onError={(event) => {
                   event.currentTarget.style.display = "none";
                   event.currentTarget.parentElement.classList.add(
@@ -136,8 +138,16 @@ function BecomeHost() {
                 }}
               />
 
-            </div>
+          </div>
 
+          <div className="mx-auto mt-8 flex max-w-[1100px] flex-col gap-4 border-t border-[#e4e4e4] pt-7 text-left sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-[#777]">
+              Start with the basics. You can edit your listing anytime.
+            </p>
+            <div className="flex items-center gap-2 text-sm font-semibold text-[#303030]">
+              <CheckCircle size={17} className="text-[#05a457]" />
+              Free to get started
+            </div>
           </div>
 
         </div>

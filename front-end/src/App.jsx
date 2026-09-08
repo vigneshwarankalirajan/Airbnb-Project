@@ -19,11 +19,17 @@ import PropertyDetails from "./Pages/PropertyDetails/PropertyDetails";
 
 import Booking from "./Pages/Booking/Booking";
 import BookingConfirmation from "./Pages/Booking/BookingConfirmation";
+import Bookings from "./Pages/Bookings";
 
 import Message from "./Pages/Messages/Message";
+import Wishlist from "./Pages/Wishlist/Wishlist";
+import Profile from "./Pages/Profile/Profile";
+import Trips from "./Pages/Trips/Trips";
+import WhyChooseUsDetails from "./Pages/WhyChooseUsDetails";
 
 // Location / Map
 import Location from "./Pages/Location/Location";
+import DestinationProperties from "./Pages/DestinationProperties/DestinationProperties";
 
 // // Host Pages
 import BecomeHost from "./Pages/BecomeHost/BecomeHost";
@@ -34,6 +40,8 @@ import HostAvailability from "./Pages/BecomeHost/HostAvailability";
 import HostAmenities from "./Pages/BecomeHost/HostAmenities";
 import HostPropertyImages from "./Pages/BecomeHost/HostPropertyImages";
 import ReviewPublish from "./Pages/BecomeHost/ReviewPublish";
+import HostDashboard from "./Pages/HostDashboard/HostDashboard";
+import PlatformOperations from "./Pages/PlatformOperations";
 
 function App() {
   return (
@@ -104,6 +112,17 @@ function App() {
           element={<BookingConfirmation />}
         />
 
+        <Route
+          path="/bookings"
+          element={<Bookings />}
+        />
+
+        <Route
+          path="/trips"
+          element={<Trips />}
+        />
+
+
         {/* ================================
             LOGIN
         ================================= */}
@@ -137,11 +156,45 @@ function App() {
         />
 
         {/* ================================
+            WISHLIST
+        ================================= */}
+        <Route
+          path="/wishlist"
+          element={<Wishlist />}
+        />
+
+        <Route
+          path="/profile"
+          element={<Profile />}
+        />
+
+        <Route
+          path="/dashboard"
+          element={<HostDashboard />}
+        />
+
+        <Route
+          path="/platform-operations"
+          element={<PlatformOperations />}
+        />
+
+        <Route
+          path="/why-choose-us/:slug"
+          element={<WhyChooseUsDetails />}
+        />
+
+
+        {/* ================================
             LOCATION / MAP
         ================================= */}
         <Route
           path="/location"
           element={<Location />}
+        />
+
+        <Route
+          path="/destination/:destination"
+          element={<DestinationProperties />}
         />
 
         {/* ================================

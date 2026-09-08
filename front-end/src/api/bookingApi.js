@@ -42,8 +42,16 @@ export const createBooking = (data) => {
    GET BOOKING
 ========================= */
 
+export const getBookings = () => {
+  return axios.get(`${API_URL}/bookings/`);
+};
+
 export const getBooking = (bookingId) => {
   return axios.get(
     `${API_URL}/bookings/${bookingId}`
   );
+};
+
+export const deleteBooking = (bookingId) => {
+  return axios.delete(`${API_URL}/bookings/${bookingId}`);
 };

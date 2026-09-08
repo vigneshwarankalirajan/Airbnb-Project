@@ -31,17 +31,15 @@ function CustomerFAQ() {
   const [openIndex, setOpenIndex] = useState(null);
 
   return (
-    <section className="bg-white py-16">
+    <section className="bg-white py-8">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
 
         <CustomerReveal>
           <div className="text-center">
-            <p className="text-sm font-semibold text-[#e61e4d]">
-              FAQ
-            </p>
+            
 
             <h2 className="mt-2 text-2xl font-bold text-gray-900 sm:text-3xl">
-              Frequently asked questions
+              Frequently asked questions?
             </h2>
           </div>
         </CustomerReveal>

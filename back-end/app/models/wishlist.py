@@ -7,6 +7,7 @@ from sqlalchemy import (
     DateTime,
 )
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 
 from app.database import Base
 
@@ -53,4 +54,10 @@ class Wishlist(Base):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False
+    )
+
+    items = relationship(
+        "WishlistItem",
+        back_populates="wishlist",
+        cascade="all, delete-orphan"
     )

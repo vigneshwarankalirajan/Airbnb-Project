@@ -1,16 +1,24 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import CustomerReveal from "./CustomerReveal";
 
 function CustomerBecomeHost() {
+  const navigate = useNavigate();
+
+  const handleBecomeHost = () => {
+    navigate("/become-host");
+  };
+
   return (
-    <section className="bg-white py-16">
+    <section className="bg-white py-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
         <CustomerReveal>
           <div className="grid overflow-hidden rounded-3xl bg-gray-900 lg:grid-cols-2">
 
+            {/* Image */}
             <div className="relative min-h-[320px]">
               <img
                 src="https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1000&q=85"
@@ -19,8 +27,10 @@ function CustomerBecomeHost() {
               />
             </div>
 
+            {/* Content */}
             <div className="flex items-center p-8 text-white sm:p-12">
               <div>
+
                 <p className="text-sm font-semibold text-pink-300">
                   BECOME A HOST
                 </p>
@@ -35,6 +45,8 @@ function CustomerBecomeHost() {
                 </p>
 
                 <button
+                  type="button"
+                  onClick={handleBecomeHost}
                   className="
                     mt-7
                     flex
@@ -54,6 +66,7 @@ function CustomerBecomeHost() {
                   Start hosting
                   <ArrowRight size={16} />
                 </button>
+
               </div>
             </div>
 

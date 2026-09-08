@@ -1,9 +1,8 @@
 import apiClient from "./apiClient";
 
-// GET /api/wishlist
-export const getWishlist = async () => {
+export const getWishlist = async (userId) => {
   const response = await apiClient.get(
-    "/api/wishlist"
+    `/wishlists/user/${userId}`
   );
 
   return response.data;

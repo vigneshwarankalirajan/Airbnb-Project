@@ -69,6 +69,13 @@ function EmailLogin() {
             "user",
             JSON.stringify(data.user)
           );
+
+          if (data.user.id) {
+            localStorage.setItem(
+              "user_id",
+              String(data.user.id)
+            );
+          }
         }
 
         navigate("/", {

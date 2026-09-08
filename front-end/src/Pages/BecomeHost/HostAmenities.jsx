@@ -140,7 +140,7 @@ function HostAmenities() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafa]">
+    <div className="host-flow-page min-h-screen bg-[#fafafa]">
 
       <header className="border-b bg-white">
 
@@ -165,9 +165,7 @@ function HostAmenities() {
 
       <main className="mx-auto max-w-3xl px-6 py-10">
 
-        <p className="text-sm font-bold uppercase tracking-widest text-[#e61e4d]">
-          Step 2
-        </p>
+        
 
         <h1 className="mt-2 text-3xl font-bold">
           What does your place offer?
