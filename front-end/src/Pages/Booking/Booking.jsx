@@ -1,18 +1,4 @@
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
-import {
-  CalendarDays,
-  Users,
-  ShieldCheck,
-  ChevronDown,
-  Loader2,
-  AlertCircle,
-} from "lucide-react";
-
+import React, { useEffect, useMemo, useState } from "react";
 import {
   useNavigate,
   useParams,
@@ -25,311 +11,586 @@ import {
   createBooking,
 } from "../../api/bookingApi";
 
+import { createPayment } from "../../api/paymentApi";
+
+import {
+  getPaymentMethods,
+  createPaymentMethod,
+} from "../../api/paymentMethodApi";
+
+import {
+  getPropertyImagesByProperty,
+} from "../../api/propertyImagesApi";
+
+// Booking UI components
+import BookingHeader from "./BookingHeader";
+import SpecialRequests from "./SpecialRequests";
+import SecureBooking from "./SecureBooking";
+import PropertySummary from "./PropertySummary";
+import PriceDetails from "./PriceDetails";
+import AvailabilityStatus from "./AvailabilityStatus";
+import ReserveButton from "./ReserveButton";
+
+// Payment UI
+import PaymentMethod from "../Payment/PaymentMethod";
+
 function Booking() {
-
   const navigate = useNavigate();
-
   const { id } = useParams();
-
   const location = useLocation();
 
+  // =========================================================
+  // PROPERTY
+  // =========================================================
 
-  /* ==========================================
-     PROPERTY
-  ========================================== */
-
-  const property =
-    location.state?.property || {};
-
+  const property = location.state?.property || {};
 
   const propertyId =
-    Number(id) ||
-    Number(property?.id);
+    Number(id) || Number(property?.id);
 
-  /* ==========================================
-     STATE
-  ========================================== */
 
-  const [checkIn, setCheckIn] =
-    useState(
+  const [propertyImages, setPropertyImages] =
+    useState([]);
+
+  const getPropertyImageUrl = (image) => {
+    if (!image) return "";
+
+    if (typeof image === "string") {
+      return image;
+    }
+
+    return (
+      image?.image_url ||
+      image?.imageUrl ||
+      image?.url ||
+      image?.image ||
+      image?.photo ||
+      image?.src ||
+      ""
+    );
+  };
+
+  const propertyImage =
+    getPropertyImageUrl(propertyImages[0]) ||
+    getPropertyImageUrl(property?.image_url) ||
+    getPropertyImageUrl(property?.image);
+
+  // =========================================================
+  // LOAD IMAGES FOR THE SELECTED PROPERTY
+  // =========================================================
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPropertyImages = async () => {
+      if (!propertyId) {
+        setPropertyImages([]);
+        return;
+      }
+
+      try {
+        const response =
+          await getPropertyImagesByProperty(propertyId);
+
+        console.log(
+          "PROPERTY IMAGES API:",
+          propertyId,
+          response
+        );
+
+        if (cancelled) return;
+
+        const rawData = response?.data ?? response;
+        let images = [];
+
+        if (Array.isArray(rawData)) {
+          images = rawData;
+        } else if (Array.isArray(rawData?.images)) {
+          images = rawData.images;
+        } else if (Array.isArray(rawData?.results)) {
+          images = rawData.results;
+        } else if (rawData) {
+          images = [rawData];
+        }
+
+        setPropertyImages(images);
+      } catch (error) {
+        console.error(
+          "PROPERTY IMAGES API ERROR:",
+          error
+        );
+
+        if (!cancelled) {
+          setPropertyImages([]);
+        }
+      }
+    };
+
+    loadPropertyImages();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [propertyId]);
+
+  // =========================================================
+  // STATE
+  // =========================================================
+
+  const [checkIn, setCheckIn] = useState(
+    location.state?.checkIn || ""
+  );
+
+  const [checkOut, setCheckOut] = useState(
+    location.state?.checkOut || ""
+  );
+
+  const [guestCount, setGuestCount] = useState(
+    Number(location.state?.guestCount || 2)
+  );
+
+  const [specialRequest, setSpecialRequest] =
+    useState("");
+
+  const [pricing, setPricing] =
+    useState(null);
+
+  const [availability, setAvailability] =
+    useState(null);
+
+  const [loadingPrice, setLoadingPrice] =
+    useState(true);
+
+  const [loadingAvailability, setLoadingAvailability] =
+    useState(false);
+
+  const [bookingLoading, setBookingLoading] =
+    useState(false);
+
+  const [paymentLoading, setPaymentLoading] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const [guestOpen, setGuestOpen] =
+    useState(false);
+
+  // =========================================================
+  // PAYMENT
+  // =========================================================
+
+  const [paymentMethods, setPaymentMethods] =
+    useState([]);
+
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState(null);
+
+  const [loadingPaymentMethods, setLoadingPaymentMethods] =
+    useState(true);
+
+  // =========================================================
+  // RESET WHEN PROPERTY CHANGES
+  //
+  // IMPORTANT:
+  // Do NOT use location.key here.
+  // Otherwise selecting dates can reset the dates.
+  // =========================================================
+
+  useEffect(() => {
+    setCheckIn(
       location.state?.checkIn || ""
     );
 
-
-  const [checkOut, setCheckOut] =
-    useState(
+    setCheckOut(
       location.state?.checkOut || ""
     );
 
-
-  const [guestCount, setGuestCount] =
-    useState(
+    setGuestCount(
       Number(
         location.state?.guestCount || 2
       )
     );
 
-
-  const [specialRequest, setSpecialRequest] =
-    useState("");
-
-
-  const [pricing, setPricing] =
-    useState(null);
-
-
-  const [availability, setAvailability] =
-    useState(null);
-
-
-  const [loadingPrice, setLoadingPrice] =
-    useState(true);
-
-
-  const [loadingAvailability, setLoadingAvailability] =
-    useState(true);
-
-
-  const [bookingLoading, setBookingLoading] =
-    useState(false);
-
-
-  const [error, setError] =
-    useState("");
-
-
-  const [guestOpen, setGuestOpen] =
-    useState(false);
-
-  useEffect(() => {
-    setCheckIn(location.state?.checkIn || "");
-    setCheckOut(location.state?.checkOut || "");
-    setGuestCount(Number(location.state?.guestCount || 2));
     setSpecialRequest("");
+
     setPricing(null);
+
     setAvailability(null);
+
     setError("");
+
     setGuestOpen(false);
-  }, [propertyId, location.key]);
 
+    setSelectedPaymentMethod(null);
+  }, [propertyId]);
 
-  /* ==========================================
-     LOAD PRICING
-  ========================================== */
+  // =========================================================
+  // LOAD PRICING
+  // =========================================================
 
   useEffect(() => {
+    let cancelled = false;
 
-    if (!propertyId) {
-      setLoadingPrice(false);
-      return;
-    }
+    const loadPricing = async () => {
+      if (!propertyId) {
+        if (!cancelled) {
+          setPricing(null);
+          setLoadingPrice(false);
+        }
+
+        return;
+      }
+
+      try {
+        if (!cancelled) {
+          setLoadingPrice(true);
+          setError("");
+        }
+
+        const response =
+          await getPricingByProperty(
+            propertyId
+          );
+
+        console.log(
+          "PRICING API:",
+          response
+        );
+
+        let data =
+          response?.data ?? response;
+
+        if (Array.isArray(data)) {
+          data =
+            data.find(
+              (item) =>
+                Number(
+                  item?.property_id
+                ) === propertyId
+            ) ||
+            data[0] ||
+            null;
+        }
+
+        if (!cancelled) {
+          setPricing(data);
+        }
+      } catch (err) {
+        console.error(
+          "Pricing API Error:",
+          err
+        );
+
+        if (!cancelled) {
+          setPricing(null);
+
+          setError(
+            err?.response?.data?.detail ||
+              err?.message ||
+              "Unable to load pricing."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingPrice(false);
+        }
+      }
+    };
 
     loadPricing();
 
+    return () => {
+      cancelled = true;
+    };
   }, [propertyId]);
 
-
-  const loadPricing = async () => {
-
-    try {
-
-      setLoadingPrice(true);
-      setError("");
-
-      const response =
-        await getPricingByProperty(
-          propertyId
-        );
-
-
-      console.log(
-        "PRICING API:",
-        response.data
-      );
-
-
-      let data =
-        response.data;
-
-
-      /*
-       API may return:
-
-       {
-         property_id: 6,
-         base_price: "5000.00",
-         cleaning_fee: "500.00",
-         service_fee: "300.00",
-         tax_percentage: "5.00"
-       }
-
-       OR
-
-       [
-         {...}
-       ]
-      */
-
-      if (Array.isArray(data)) {
-
-        data =
-          data.find(
-            (item) =>
-              Number(
-                item.property_id
-              ) === propertyId
-          ) ||
-          data[0] ||
-          null;
-
-      }
-
-
-      setPricing(data);
-
-    } catch (err) {
-
-      console.error(
-        "Pricing API Error:",
-        err
-      );
-
-      setError(
-        err?.response?.data?.detail ||
-        "Unable to load pricing."
-      );
-
-    } finally {
-
-      setLoadingPrice(false);
-
-    }
-
-  };
-
-
-  /* ==========================================
-     LOAD AVAILABILITY
-  ========================================== */
+  // =========================================================
+  // LOAD AVAILABILITY
+  //
+  // Runs whenever property/date changes.
+  // =========================================================
 
   useEffect(() => {
+    let cancelled = false;
 
-    if (!propertyId) {
-      setLoadingAvailability(false);
-      return;
-    }
+    const loadAvailability = async () => {
+      if (!propertyId) {
+        if (!cancelled) {
+          setAvailability(null);
+          setLoadingAvailability(false);
+        }
+
+        return;
+      }
+
+      // Dates not selected yet
+      if (!checkIn || !checkOut) {
+        if (!cancelled) {
+          setAvailability(null);
+          setLoadingAvailability(false);
+        }
+
+        return;
+      }
+
+      const start = new Date(
+        `${checkIn}T00:00:00`
+      );
+
+      const end = new Date(
+        `${checkOut}T00:00:00`
+      );
+
+      // Invalid date range
+      if (
+        Number.isNaN(start.getTime()) ||
+        Number.isNaN(end.getTime()) ||
+        start >= end
+      ) {
+        if (!cancelled) {
+          setAvailability(null);
+          setLoadingAvailability(false);
+        }
+
+        return;
+      }
+
+      try {
+        if (!cancelled) {
+          setLoadingAvailability(true);
+
+          // Clear old result while checking
+          setAvailability(null);
+
+          setError("");
+        }
+
+        const response =
+          await getPropertyAvailability(
+            propertyId
+          );
+
+        console.log(
+          "AVAILABILITY API:",
+          response
+        );
+
+        const rawData =
+          response?.data ?? response;
+
+        let records = [];
+
+        /*
+         * Supported API response formats:
+         *
+         * []
+         *
+         * { availability: [] }
+         *
+         * { data: [] }
+         *
+         * { results: [] }
+         *
+         * { available_from: ..., available_to: ... }
+         */
+
+        if (Array.isArray(rawData)) {
+          records = rawData;
+        } else if (
+          Array.isArray(
+            rawData?.availability
+          )
+        ) {
+          records =
+            rawData.availability;
+        } else if (
+          Array.isArray(
+            rawData?.data
+          )
+        ) {
+          records = rawData.data;
+        } else if (
+          Array.isArray(
+            rawData?.results
+          )
+        ) {
+          records = rawData.results;
+        } else if (rawData) {
+          records = [rawData];
+        }
+
+        console.log(
+          "NORMALIZED AVAILABILITY:",
+          records
+        );
+
+        if (!cancelled) {
+          setAvailability(records);
+        }
+      } catch (err) {
+        console.error(
+          "Availability API Error:",
+          err
+        );
+
+        if (!cancelled) {
+          setAvailability(null);
+
+          setError(
+            err?.response?.data?.detail ||
+              "Unable to check property availability."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingAvailability(false);
+        }
+      }
+    };
 
     loadAvailability();
 
-  }, [propertyId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    propertyId,
+    checkIn,
+    checkOut,
+  ]);
 
+  // =========================================================
+  // LOAD SAVED PAYMENT METHODS
+  // =========================================================
 
-  const loadAvailability = async () => {
+  useEffect(() => {
+    loadPaymentMethods();
+  }, []);
 
-    try {
-
-      setLoadingAvailability(true);
-
-      const response =
-        await getPropertyAvailability(
-          propertyId
+  const loadPaymentMethods =
+    async () => {
+      try {
+        setLoadingPaymentMethods(
+          true
         );
 
+        const response =
+          await getPaymentMethods();
 
-      console.log(
-        "AVAILABILITY API:",
-        response.data
-      );
+        console.log(
+          "PAYMENT METHODS API:",
+          response
+        );
 
+        const rawData =
+          response?.data ?? response;
 
-      const data = Array.isArray(response.data)
-        ? response.data
-        : response.data
-          ? [response.data]
+        const methods = Array.isArray(
+          rawData
+        )
+          ? rawData
+          : Array.isArray(
+              rawData?.payment_methods
+            )
+          ? rawData.payment_methods
           : [];
 
-      setAvailability(data);
+        const activeMethods =
+          methods.filter(
+            (method) =>
+              method?.status !==
+                "inactive" &&
+              method?.status !==
+                "disabled"
+          );
 
-    } catch (err) {
+        setPaymentMethods(
+          activeMethods
+        );
 
-      console.error(
-        "Availability API Error:",
-        err
-      );
+        const defaultMethod =
+          activeMethods.find(
+            (method) =>
+              method?.is_default ===
+              true
+          ) ||
+          activeMethods[0] ||
+          null;
 
-      setAvailability(null);
+        setSelectedPaymentMethod(
+          defaultMethod
+        );
+      } catch (err) {
+        console.error(
+          "PAYMENT METHODS ERROR:",
+          err
+        );
 
-    } finally {
+        setPaymentMethods([]);
 
-      setLoadingAvailability(false);
+        setSelectedPaymentMethod(
+          null
+        );
+      } finally {
+        setLoadingPaymentMethods(
+          false
+        );
+      }
+    };
 
-    }
-
-  };
-
-
-  /* ==========================================
-     NUMBER OF NIGHTS
-  ========================================== */
+  // =========================================================
+  // NUMBER OF NIGHTS
+  // =========================================================
 
   const nights = useMemo(() => {
-
     if (!checkIn || !checkOut) {
       return 0;
     }
 
+    const start = new Date(
+      checkIn.includes("T")
+        ? checkIn
+        : `${checkIn}T00:00:00`
+    );
 
-    const start =
-      new Date(checkIn);
+    const end = new Date(
+      checkOut.includes("T")
+        ? checkOut
+        : `${checkOut}T00:00:00`
+    );
 
-
-    const end =
-      new Date(checkOut);
-
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime())
+    ) {
+      return 0;
+    }
 
     const difference =
       end.getTime() -
       start.getTime();
 
-
-    const result =
-      Math.ceil(
-        difference /
+    const result = Math.round(
+      difference /
         (1000 * 60 * 60 * 24)
-      );
-
+    );
 
     return result > 0
       ? result
       : 0;
-
   }, [
     checkIn,
     checkOut,
   ]);
 
-
-  /* ==========================================
-     PRICE CALCULATION
-  ========================================== */
+  // =========================================================
+  // PRICE CALCULATION
+  // =========================================================
 
   const priceDetails = useMemo(() => {
-
     if (!pricing) {
-
       return {
         basePrice: 0,
-        cleaningFee: 0,
-        serviceFee: 0,
-        tax: 0,
-        total: 0,
-      };
-    }
-
-
-    if (!nights) {
-      return {
-        basePrice: Number(pricing.base_price || 0),
         cleaningFee: 0,
         serviceFee: 0,
         guestFee: 0,
@@ -338,58 +599,63 @@ function Booking() {
       };
     }
 
-
     const basePrice =
       Number(
-        pricing.base_price || 0
+        pricing?.base_price || 0
       );
-
 
     const cleaningFee =
       Number(
-        pricing.cleaning_fee || 0
+        pricing?.cleaning_fee || 0
       );
-
 
     const serviceFee =
       Number(
-        pricing.service_fee || 0
+        pricing?.service_fee || 0
       );
 
-    const extraGuestFee = Number(
-      pricing.extra_guest_fee ||
-        pricing.additional_guest_fee ||
-        pricing.guest_fee ||
-        Number(pricing.base_price || 0) * 0.1
-    );
-
+    const extraGuestFee =
+      Number(
+        pricing?.extra_guest_fee ??
+          pricing?.additional_guest_fee ??
+          pricing?.guest_fee ??
+          basePrice * 0.1
+      );
 
     const taxPercentage =
       Number(
-        pricing.tax_percentage || 0
+        pricing?.tax_percentage || 0
       );
 
+    if (!nights) {
+      return {
+        basePrice,
+        cleaningFee: 0,
+        serviceFee: 0,
+        guestFee: 0,
+        tax: 0,
+        total: 0,
+      };
+    }
 
     const stayAmount =
       basePrice * nights;
 
-
     const guestFee =
       extraGuestFee *
-      Math.max(guestCount - 1, 0) *
+      Math.max(
+        guestCount - 1,
+        0
+      ) *
       nights;
 
     const tax =
-      (
-        (
-          stayAmount +
-          cleaningFee +
-          serviceFee +
-          guestFee
-        ) *
-        taxPercentage
-      ) / 100;
-
+      ((stayAmount +
+        cleaningFee +
+        serviceFee +
+        guestFee) *
+        taxPercentage) /
+      100;
 
     const total =
       stayAmount +
@@ -398,321 +664,764 @@ function Booking() {
       guestFee +
       tax;
 
-
     return {
-
       basePrice,
-
       cleaningFee,
-
       serviceFee,
       guestFee,
-
       tax,
-
       total,
-
     };
-
   }, [
     pricing,
     nights,
     guestCount,
   ]);
 
+  // =========================================================
+  // CHECK AVAILABILITY
+  // =========================================================
 
-  /* ==========================================
-     CHECK AVAILABILITY
-  ========================================== */
-
-  const isDateAvailable = useMemo(() => {
-
-    if (!availability) {
-      return false;
-    }
-
-
-    const selectedCheckIn =
-      new Date(checkIn);
-
-
-    const selectedCheckOut =
-      new Date(checkOut);
-
-
-    if (!(selectedCheckIn < selectedCheckOut)) {
-      return false;
-    }
-
-    if (availability.length === 0) {
-      return true;
-    }
-
-    return availability.some((record) => {
-      const availableFrom = record.available_from
-        ? new Date(record.available_from)
-        : null;
-      const availableTo = record.available_to
-        ? new Date(record.available_to)
-        : null;
-
-      return (
-        record.is_available !== false &&
-        (!availableFrom || selectedCheckIn >= availableFrom) &&
-        (!availableTo || selectedCheckOut <= availableTo)
-      );
-    });
-
-  }, [
-    availability,
-    checkIn,
-    checkOut,
-  ]);
-
-
-  /* ==========================================
-     RESERVE / CREATE BOOKING
-  ========================================== */
-
-  const handleReserve = async () => {
-
-    try {
-
-      setError("");
-
-
-      if (!propertyId) {
-
-        setError(
-          "Property ID is missing."
-        );
-
-        return;
+  const isDateAvailable =
+    useMemo(() => {
+      // API has not completed yet
+      if (!availability) {
+        return false;
       }
 
-
-      if (!nights) {
-
-        setError(
-          "Please select valid check-in and check-out dates."
-        );
-
-        return;
+      // Dates required
+      if (!checkIn || !checkOut) {
+        return false;
       }
 
-
-      if (!isDateAvailable) {
-
-        setError(
-          "Selected dates are not available."
+      const selectedCheckIn =
+        new Date(
+          `${checkIn}T00:00:00`
         );
 
-        return;
-      }
+      const selectedCheckOut =
+        new Date(
+          `${checkOut}T00:00:00`
+        );
 
-
+      // Invalid date
       if (
-        !priceDetails.total ||
-        priceDetails.total <= 0
+        Number.isNaN(
+          selectedCheckIn.getTime()
+        ) ||
+        Number.isNaN(
+          selectedCheckOut.getTime()
+        )
       ) {
-
-        setError(
-          "Pricing is not available for this property."
-        );
-
-        return;
+        return false;
       }
 
+      // Checkout must be after check-in
+      if (
+        selectedCheckIn >=
+        selectedCheckOut
+      ) {
+        return false;
+      }
 
       /*
-       IMPORTANT
+       * IMPORTANT:
+       *
+       * Empty array means there are no
+       * unavailable/blocked records.
+       *
+       * Therefore selected dates are
+       * considered available.
+       */
 
-       Replace this with your actual
-       logged-in guest ID if stored differently.
-      */
+      if (
+        availability.length === 0
+      ) {
+        return true;
+      }
 
-      const guestId =
+      /*
+       * If records exist, evaluate them.
+       */
+
+      return availability.some(
+        (record) => {
+          // Explicit unavailable
+          if (
+            record?.is_available ===
+            false
+          ) {
+            return false;
+          }
+
+          if (
+            record?.available ===
+            false
+          ) {
+            return false;
+          }
+
+          if (
+            String(
+              record?.status || ""
+            ).toLowerCase() ===
+            "unavailable"
+          ) {
+            return false;
+          }
+
+          /*
+           * Some APIs may return an
+           * explicit available=true record.
+           */
+
+          if (
+            record?.is_available ===
+              true &&
+            !record?.available_from &&
+            !record?.available_to
+          ) {
+            return true;
+          }
+
+          if (
+            record?.available ===
+              true &&
+            !record?.available_from &&
+            !record?.available_to
+          ) {
+            return true;
+          }
+
+          const availableFrom =
+            record?.available_from
+              ? new Date(
+                  `${String(
+                    record.available_from
+                  ).slice(
+                    0,
+                    10
+                  )}T00:00:00`
+                )
+              : null;
+
+          const availableTo =
+            record?.available_to
+              ? new Date(
+                  `${String(
+                    record.available_to
+                  ).slice(
+                    0,
+                    10
+                  )}T00:00:00`
+                )
+              : null;
+
+          const hasValidFrom =
+            availableFrom &&
+            !Number.isNaN(
+              availableFrom.getTime()
+            );
+
+          const hasValidTo =
+            availableTo &&
+            !Number.isNaN(
+              availableTo.getTime()
+            );
+
+          const validFrom =
+            !hasValidFrom ||
+            selectedCheckIn >=
+              availableFrom;
+
+          const validTo =
+            !hasValidTo ||
+            selectedCheckOut <=
+              availableTo;
+
+          return (
+            validFrom &&
+            validTo
+          );
+        }
+      );
+    }, [
+      availability,
+      checkIn,
+      checkOut,
+    ]);
+
+  // =========================================================
+  // FORMAT DATE
+  // =========================================================
+
+  const formatBookingDate =
+    (value) => {
+      if (!value) {
+        return "Select date";
+      }
+
+      const date = new Date(
+        String(value).includes("T")
+          ? value
+          : `${value}T00:00:00`
+      );
+
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
+        return "Select date";
+      }
+
+      return date.toLocaleDateString(
+        "en-IN",
+        {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }
+      );
+    };
+
+  // =========================================================
+  // CREATE PAYMENT METHOD
+  // =========================================================
+
+  const saveNewPaymentMethod =
+    async () => {
+      if (
+        !selectedPaymentMethod ||
+        !selectedPaymentMethod.is_new ||
+        !selectedPaymentMethod.save_payment_method
+      ) {
+        return null;
+      }
+
+      const userId =
         Number(
           localStorage.getItem(
             "guest_id"
           )
         ) || 1;
 
+      const methodType =
+        selectedPaymentMethod.method_type;
 
-      /*
-       Host ID comes from property API.
-      */
+      // -------------------------------------------------------
+      // CREDIT CARD
+      // -------------------------------------------------------
 
-      const hostId =
-        Number(
-          property?.host_id
-        ) || 5;
+      if (
+        methodType ===
+        "credit_card"
+      ) {
+        const cleanCardNumber =
+          String(
+            selectedPaymentMethod.card_number ||
+              ""
+          ).replace(/\D/g, "");
 
+        const expiry =
+          selectedPaymentMethod.expiry ||
+          "";
 
-      const bookingPayload = {
+        const [month, year] =
+          expiry.split("/");
 
-        guest_id: guestId,
+        if (
+          !cleanCardNumber ||
+          cleanCardNumber.length <
+            4
+        ) {
+          throw new Error(
+            "Invalid card details."
+          );
+        }
 
-        host_id: hostId,
+        const payload = {
+          user_id: userId,
 
-        property_id: propertyId,
+          method_type:
+            "credit_card",
 
-        check_in: checkIn,
+          provider:
+            selectedPaymentMethod.provider ||
+            "Visa",
 
-        check_out: checkOut,
+          account_holder_name:
+            selectedPaymentMethod.account_holder_name ||
+            "",
 
-        guest_count: guestCount,
+          last_four_digits:
+            cleanCardNumber.slice(-4),
 
-        booking_status: "confirmed",
+          expiry_month:
+            Number(month) || null,
 
-        total_amount:
-          priceDetails.total.toFixed(2),
+          expiry_year: year
+            ? Number(`20${year}`)
+            : null,
 
-        currency:
-          pricing?.currency || "INR",
+          is_default: true,
 
-        booking_method: "online",
+          status: "active",
+        };
 
-        special_request:
-          specialRequest || null,
+        console.log(
+          "SAVE PAYMENT METHOD:",
+          payload
+        );
 
-      };
+        return createPaymentMethod(
+          payload
+        );
+      }
 
+      // -------------------------------------------------------
+      // UPI
+      // -------------------------------------------------------
 
-      console.log(
-        "CREATE BOOKING PAYLOAD:",
-        bookingPayload
-      );
+      if (
+        methodType === "upi"
+      ) {
+        const payload = {
+          user_id: userId,
 
+          method_type: "upi",
 
-      setBookingLoading(true);
+          provider:
+            selectedPaymentMethod.provider ||
+            "UPI",
 
+          account_holder_name:
+            selectedPaymentMethod.account_holder_name ||
+            null,
 
-      const response =
-        await createBooking(
+          last_four_digits: null,
+
+          expiry_month: null,
+
+          expiry_year: null,
+
+          is_default: true,
+
+          status: "active",
+        };
+
+        console.log(
+          "SAVE UPI PAYMENT METHOD:",
+          payload
+        );
+
+        return createPaymentMethod(
+          payload
+        );
+      }
+
+      // -------------------------------------------------------
+      // NET BANKING
+      // -------------------------------------------------------
+
+      if (
+        methodType ===
+        "net_banking"
+      ) {
+        const payload = {
+          user_id: userId,
+
+          method_type:
+            "net_banking",
+
+          provider:
+            selectedPaymentMethod.provider ||
+            "Net Banking",
+
+          account_holder_name:
+            selectedPaymentMethod.account_holder_name ||
+            null,
+
+          last_four_digits: null,
+
+          expiry_month: null,
+
+          expiry_year: null,
+
+          is_default: true,
+
+          status: "active",
+        };
+
+        console.log(
+          "SAVE NET BANKING PAYMENT METHOD:",
+          payload
+        );
+
+        return createPaymentMethod(
+          payload
+        );
+      }
+
+      return null;
+    };
+
+  // =========================================================
+  // RESERVE + PAYMENT
+  // =========================================================
+
+  const handleReserve =
+    async () => {
+      try {
+        setError("");
+
+        // -----------------------------------------------------
+        // PROPERTY
+        // -----------------------------------------------------
+
+        if (!propertyId) {
+          setError(
+            "Property ID is missing."
+          );
+          return;
+        }
+
+        // -----------------------------------------------------
+        // DATES
+        // -----------------------------------------------------
+
+        if (!nights) {
+          setError(
+            "Please select valid check-in and check-out dates."
+          );
+          return;
+        }
+
+        // -----------------------------------------------------
+        // AVAILABILITY
+        // -----------------------------------------------------
+
+        if (!isDateAvailable) {
+          setError(
+            "Selected dates are not available."
+          );
+          return;
+        }
+
+        // -----------------------------------------------------
+        // PRICE
+        // -----------------------------------------------------
+
+        if (
+          !priceDetails.total ||
+          priceDetails.total <= 0
+        ) {
+          setError(
+            "Pricing is not available for this property."
+          );
+          return;
+        }
+
+        // -----------------------------------------------------
+        // PAYMENT METHOD
+        // -----------------------------------------------------
+
+        if (!selectedPaymentMethod) {
+          setError(
+            "Please select a payment method."
+          );
+          return;
+        }
+
+        // -----------------------------------------------------
+        // GUEST ID
+        // -----------------------------------------------------
+
+        const guestId =
+          Number(
+            localStorage.getItem(
+              "guest_id"
+            )
+          ) || 1;
+
+        // -----------------------------------------------------
+        // HOST ID
+        // -----------------------------------------------------
+
+        const hostId =
+          Number(
+            property?.host_id
+          ) || 5;
+
+        // -----------------------------------------------------
+        // BOOKING PAYLOAD
+        // -----------------------------------------------------
+
+        const bookingPayload = {
+          guest_id: guestId,
+
+          host_id: hostId,
+
+          property_id:
+            propertyId,
+
+          check_in:
+            checkIn,
+
+          check_out:
+            checkOut,
+
+          guest_count:
+            guestCount,
+
+          booking_status:
+            "confirmed",
+
+          total_amount:
+            priceDetails.total.toFixed(
+              2
+            ),
+
+          currency:
+            pricing?.currency ||
+            "INR",
+
+          booking_method:
+            "online",
+
+          special_request:
+            specialRequest ||
+            null,
+        };
+
+        console.log(
+          "CREATE BOOKING PAYLOAD:",
           bookingPayload
         );
 
+        // -----------------------------------------------------
+        // CREATE BOOKING
+        // -----------------------------------------------------
 
-      console.log(
-        "BOOKING RESPONSE:",
-        response.data
-      );
+        setBookingLoading(true);
 
+        const bookingResponse =
+          await createBooking(
+            bookingPayload
+          );
 
-      const createdBooking =
-        response.data;
+        console.log(
+          "BOOKING RESPONSE:",
+          bookingResponse
+        );
 
+        const createdBooking =
+          bookingResponse?.data ||
+          bookingResponse;
 
-      /*
-       Go to confirmation page
-      */
+        const bookingId =
+          createdBooking?.id ||
+          createdBooking?.booking_id;
 
-      navigate(
-        `/booking-confirmation/${createdBooking.id}`,
+        if (!bookingId) {
+          throw new Error(
+            "Booking was created but booking ID was not returned."
+          );
+        }
+
+        console.log(
+          "CREATED BOOKING ID:",
+          bookingId
+        );
+
+        // -----------------------------------------------------
+        // CREATE PAYMENT
+        // -----------------------------------------------------
+
+        setPaymentLoading(true);
+
+        const paymentPayload = {
+          booking_id:
+            Number(bookingId),
+
+          currency_id:
+            Number(
+              pricing?.currency_id
+            ) || 1,
+
+          amount:
+            priceDetails.total.toFixed(
+              2
+            ),
+
+          payment_method:
+            selectedPaymentMethod.method_type,
+        };
+
+        console.log(
+          "PAYMENT PAYLOAD:",
+          paymentPayload
+        );
+
+        const paymentResponse =
+          await createPayment(
+            paymentPayload
+          );
+
+        console.log(
+          "PAYMENT RESPONSE:",
+          paymentResponse
+        );
+
+        const payment =
+          paymentResponse?.data ||
+          paymentResponse;
+
+        // -----------------------------------------------------
+        // PAYMENT STATUS
+        // -----------------------------------------------------
+
+        if (
+          payment?.payment_status !==
+          "paid"
+        ) {
+          throw new Error(
+            payment?.failure_reason ||
+              "Payment was not successful."
+          );
+        }
+
+        console.log(
+          "PAYMENT SUCCESS:",
+          payment
+        );
+
+        // -----------------------------------------------------
+        // SAVE NEW PAYMENT METHOD
+        // -----------------------------------------------------
+
+        try {
+          await saveNewPaymentMethod();
+
+          await loadPaymentMethods();
+        } catch (saveError) {
+          console.error(
+            "SAVE PAYMENT METHOD ERROR:",
+            saveError
+          );
+        }
+
+        // -----------------------------------------------------
+        // BOOKING CONFIRMATION
+        // -----------------------------------------------------
+
+        navigate(
+          `/booking-confirmation/${bookingId}`,
+          {
+            state: {
+              booking:
+                createdBooking,
+
+              payment:
+                payment,
+
+              paymentMethod:
+                selectedPaymentMethod,
+
+              property:
+                property,
+
+              checkIn:
+                checkIn,
+
+              checkOut:
+                checkOut,
+
+              guestCount:
+                guestCount,
+
+              totalAmount:
+                priceDetails.total,
+            },
+          }
+        );
+      } catch (err) {
+        console.error(
+          "BOOKING / PAYMENT ERROR:",
+          err
+        );
+
+        setError(
+          err?.response?.data?.detail ||
+            err?.message ||
+            "Unable to complete booking and payment."
+        );
+      } finally {
+        setBookingLoading(false);
+        setPaymentLoading(false);
+      }
+    };
+
+  // =========================================================
+  // FORMAT CURRENCY
+  // =========================================================
+
+  const formatCurrency =
+    (value) => {
+      return Number(
+        value || 0
+      ).toLocaleString(
+        "en-IN",
         {
-          state: {
-
-            booking:
-              createdBooking,
-
-            property:
-              property,
-
-            checkIn,
-
-            checkOut,
-
-            guestCount,
-
-            totalAmount:
-              priceDetails.total,
-
-          },
+          maximumFractionDigits: 2,
         }
       );
+    };
 
-    } catch (err) {
-
-      console.error(
-        "BOOKING ERROR:",
-        err
-      );
-
-
-      setError(
-        err?.response?.data?.detail ||
-        "Unable to create booking."
-      );
-
-    } finally {
-
-      setBookingLoading(false);
-
-    }
-
-  };
-
-
-  /* ==========================================
-     FORMAT CURRENCY
-  ========================================== */
-
-  const formatCurrency = (value) => {
-
-    return Number(
-      value || 0
-    ).toLocaleString(
-      "en-IN",
-      {
-        maximumFractionDigits: 2,
-      }
-    );
-
-  };
-
-
-  /* ==========================================
-     IMAGE
-  ========================================== */
-
-  const propertyImage =
-    property?.image ||
-    property?.image_url ||
-    property?.images?.[0]?.image_url ||
-    "";
-
-
-  /* ==========================================
-     UI
-  ========================================== */
+  // =========================================================
+  // UI
+  // =========================================================
 
   return (
-
     <div className="min-h-screen bg-[#f7f7f7]">
 
-      <main className="mx-auto max-w-[1200px] px-5 py-8">
+      <main className="mx-auto max-w-[1200px] px-4 py-6 sm:px-5 sm:py-8">
+
+        {/* =================================================
+            HEADER
+        ================================================= */}
+
+        <BookingHeader />
+
+        {/* =================================================
+            MAIN LAYOUT
+        ================================================= */}
 
         <div className="grid gap-6 lg:grid-cols-[1.35fr_0.85fr]">
 
-          {/* ====================================
-              LEFT
-          ==================================== */}
+          {/* =================================================
+              LEFT SIDE
+          ================================================= */}
 
-          <div>
+          <div className="min-w-0">
 
-            {/* YOUR TRIP */}
+            {/* =================================================
+                YOUR TRIP
+            ================================================= */}
 
-            <section className="rounded-[28px] border border-gray-200 bg-white p-7 shadow-sm">
+            <section className="rounded-[28px] border border-gray-200 bg-white p-5 shadow-sm sm:p-7">
 
               <h1 className="text-2xl font-bold text-[#10213f]">
                 Your trip
               </h1>
 
+              {/* =================================================
+                  DATES
+              ================================================= */}
 
-              <div className="mt-8 grid gap-5 sm:grid-cols-2">
+              <div className="mt-7 grid gap-5 sm:grid-cols-2">
 
-                {/* CHECK IN */}
+                {/* CHECK-IN */}
 
                 <div>
 
@@ -720,41 +1429,44 @@ function Booking() {
                     Check-in
                   </label>
 
+                  <input
+                    type="date"
+                    value={checkIn}
+                    min={
+                      availability?.[0]
+                        ?.available_from ||
+                      undefined
+                    }
+                    onChange={(e) => {
+                      const value =
+                        e.target.value;
 
-                  <div className="relative mt-2">
+                      setCheckIn(value);
 
-                    <CalendarDays
-                      size={19}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
-                    />
+                      /*
+                       * If check-in becomes
+                       * equal/after checkout,
+                       * clear checkout.
+                       */
 
-
-                    <input
-                      type="date"
-                      value={checkIn}
-                      min={
-                        availability?.available_from ||
-                        undefined
+                      if (
+                        checkOut &&
+                        new Date(
+                          `${value}T00:00:00`
+                        ) >=
+                          new Date(
+                            `${checkOut}T00:00:00`
+                          )
+                      ) {
+                        setCheckOut("");
                       }
-                      onChange={(e) =>
-                        setCheckIn(
-                          e.target.value
-                        )
-                      }
-                      className="h-[52px] w-full rounded-xl border border-gray-300 bg-white pl-12 pr-4 text-sm outline-none focus:border-[#e61e4d]"
-                    />
-
-                  </div>
-
-
-                  <p className="mt-1 text-xs text-gray-400">
-                    {checkIn}
-                  </p>
+                    }}
+                    className="mt-2 h-[52px] w-full rounded-xl border border-gray-300 bg-white px-4 text-sm outline-none transition focus:border-[#e61e4d]"
+                  />
 
                 </div>
 
-
-                {/* CHECK OUT */}
+                {/* CHECK-OUT */}
 
                 <div>
 
@@ -762,44 +1474,116 @@ function Booking() {
                     Check-out
                   </label>
 
-
-                  <div className="relative mt-2">
-
-                    <CalendarDays
-                      size={19}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
-                    />
-
-
-                    <input
-                      type="date"
-                      value={checkOut}
-                      min={checkIn}
-                      max={
-                        availability?.available_to ||
-                        undefined
-                      }
-                      onChange={(e) =>
-                        setCheckOut(
-                          e.target.value
-                        )
-                      }
-                      className="h-[52px] w-full rounded-xl border border-gray-300 bg-white pl-12 pr-4 text-sm outline-none focus:border-[#e61e4d]"
-                    />
-
-                  </div>
-
-
-                  <p className="mt-1 text-xs text-gray-400">
-                    {checkOut}
-                  </p>
+                  <input
+                    type="date"
+                    value={checkOut}
+                    min={
+                      checkIn ||
+                      undefined
+                    }
+                    max={
+                      availability?.[0]
+                        ?.available_to ||
+                      undefined
+                    }
+                    onChange={(e) =>
+                      setCheckOut(
+                        e.target.value
+                      )
+                    }
+                    className="mt-2 h-[52px] w-full rounded-xl border border-gray-300 bg-white px-4 text-sm outline-none transition focus:border-[#e61e4d]"
+                  />
 
                 </div>
 
               </div>
 
+              {/* =================================================
+                  DYNAMIC TRIP DETAILS
+              ================================================= */}
 
-              {/* GUESTS */}
+              <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white px-4 py-4">
+
+                <div className="grid items-center gap-4 sm:grid-cols-[1fr_auto_1fr_auto]">
+
+                  {/* CHECK-IN */}
+
+                  <div>
+
+                    <p className="text-xs font-medium text-[#64748b]">
+                      Check-in
+                    </p>
+
+                    <p className="mt-1 text-sm font-bold text-[#10213f]">
+                      {checkIn
+                        ? formatBookingDate(
+                            checkIn
+                          )
+                        : "Select date"}
+                    </p>
+
+                    <p className="mt-1 text-xs text-[#64748b]">
+                      3:00 PM
+                    </p>
+
+                  </div>
+
+                  {/* ARROW */}
+
+                  <div className="hidden sm:block text-center text-xl text-[#52637d]">
+                    →
+                  </div>
+
+                  {/* CHECK-OUT */}
+
+                  <div>
+
+                    <p className="text-xs font-medium text-[#64748b]">
+                      Check-out
+                    </p>
+
+                    <p className="mt-1 text-sm font-bold text-[#10213f]">
+                      {checkOut
+                        ? formatBookingDate(
+                            checkOut
+                          )
+                        : "Select date"}
+                    </p>
+
+                    <p className="mt-1 text-xs text-[#64748b]">
+                      11:00 AM
+                    </p>
+
+                  </div>
+
+                  {/* NIGHTS */}
+
+                  <div className="border-t border-[#e5e7eb] pt-3 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
+
+                    <div className="flex items-center gap-2">
+
+                      <span className="text-lg text-[#52637d]">
+                        ☾
+                      </span>
+
+                      <p className="text-sm font-semibold text-[#10213f]">
+                        {nights}{" "}
+                        {nights === 1
+                          ? "night"
+                          : "nights"}
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+              {/* =================================================
+                  GUESTS
+              ================================================= */}
 
               <div className="mt-7">
 
@@ -807,54 +1591,41 @@ function Booking() {
                   Guests
                 </label>
 
-
                 <div className="relative">
 
                   <button
                     type="button"
                     onClick={() =>
                       setGuestOpen(
-                        !guestOpen
+                        (prev) =>
+                          !prev
                       )
                     }
-                    className="mt-2 flex h-[52px] w-full items-center justify-between rounded-xl border border-gray-300 bg-white px-4"
+                    className="mt-2 flex h-[52px] w-full items-center justify-between rounded-xl border border-gray-300 bg-white px-4 text-left"
                   >
 
-                    <span className="flex items-center gap-3">
-
-                      <Users
-                        size={20}
-                        className="text-gray-500"
-                      />
-
-                      <span className="text-sm">
-                        {guestCount}{" "}
-                        {guestCount === 1
-                          ? "guest"
-                          : "guests"}
-                      </span>
-
+                    <span className="text-sm">
+                      {guestCount}{" "}
+                      {guestCount ===
+                      1
+                        ? "guest"
+                        : "guests"}
                     </span>
 
-
-                    <ChevronDown
-                      size={18}
-                      className="text-gray-500"
-                    />
+                    <span className="text-gray-500">
+                      ▼
+                    </span>
 
                   </button>
 
-
                   {guestOpen && (
-
-                    <div className="absolute left-0 right-0 z-20 mt-2 rounded-xl border bg-white p-4 shadow-xl">
+                    <div className="absolute left-0 right-0 z-20 mt-2 rounded-xl border border-gray-200 bg-white p-4 shadow-xl">
 
                       <div className="flex items-center justify-between">
 
                         <span className="font-medium">
                           Guests
                         </span>
-
 
                         <div className="flex items-center gap-4">
 
@@ -864,29 +1635,29 @@ function Booking() {
                               setGuestCount(
                                 Math.max(
                                   1,
-                                  guestCount - 1
+                                  guestCount -
+                                    1
                                 )
                               )
                             }
-                            className="h-8 w-8 rounded-full border"
+                            className="h-8 w-8 rounded-full border border-gray-300"
                           >
                             −
                           </button>
-
 
                           <span>
                             {guestCount}
                           </span>
 
-
                           <button
                             type="button"
                             onClick={() =>
                               setGuestCount(
-                                guestCount + 1
+                                guestCount +
+                                  1
                               )
                             }
-                            className="h-8 w-8 rounded-full border"
+                            className="h-8 w-8 rounded-full border border-gray-300"
                           >
                             +
                           </button>
@@ -896,7 +1667,6 @@ function Booking() {
                       </div>
 
                     </div>
-
                   )}
 
                 </div>
@@ -905,58 +1675,65 @@ function Booking() {
 
             </section>
 
+            {/* =================================================
+                SPECIAL REQUESTS
+            ================================================= */}
 
-            {/* SPECIAL REQUEST */}
+            <SpecialRequests
+              value={
+                specialRequest
+              }
+              onChange={
+                setSpecialRequest
+              }
+            />
 
-            <section className="mt-6 rounded-[28px] border border-gray-200 bg-white p-7 shadow-sm">
+            {/* =================================================
+                SECURE BOOKING
+            ================================================= */}
 
-              <h2 className="text-xl font-bold text-[#10213f]">
-                Special requests
-              </h2>
+            <SecureBooking />
 
+            {/* =================================================
+                PAYMENT METHOD
+                LEFT SIDE / FULL WIDTH
+            ================================================= */}
 
-              <p className="mt-2 text-sm text-gray-500">
-                Let the host know if you have any special requirements.
-              </p>
+            <section className="mt-5 rounded-[28px] border border-gray-200 bg-white p-5 shadow-sm sm:p-7">
 
+              <div className="mb-5">
 
-              <textarea
-                value={specialRequest}
-                onChange={(e) =>
-                  setSpecialRequest(
-                    e.target.value
-                  )
-                }
-                placeholder="Optional"
-                rows={4}
-                className="mt-5 w-full resize-none rounded-xl border border-gray-300 p-4 text-sm outline-none focus:border-[#e61e4d]"
-              />
+                <h2 className="text-xl font-bold text-[#10213f]">
+                  Payment method
+                </h2>
 
-            </section>
+                <p className="mt-1 text-sm text-[#64748b]">
+                  Choose your preferred
+                  payment method.
+                </p>
 
+              </div>
 
-            {/* SECURE BOOKING */}
+              <div className="w-full min-w-0">
 
-            <section className="mt-6 rounded-[28px] border border-gray-200 bg-white p-7 shadow-sm">
-
-              <div className="flex gap-4">
-
-                <ShieldCheck
-                  size={27}
-                  className="text-[#123d78]"
+                <PaymentMethod
+                  savedPaymentMethods={
+                    paymentMethods
+                  }
+                  selectedPaymentMethod={
+                    selectedPaymentMethod
+                  }
+                  setSelectedPaymentMethod={
+                    setSelectedPaymentMethod
+                  }
+                  loadingPaymentMethods={
+                    loadingPaymentMethods
+                  }
+                  disabled={
+                    bookingLoading ||
+                    paymentLoading
+                  }
                 />
-
-                <div>
-
-                  <h3 className="font-bold text-gray-900">
-                    Secure booking
-                  </h3>
-
-                  <p className="mt-2 text-sm leading-6 text-gray-500">
-                    Your booking information is securely processed through the Airbnb-style booking flow.
-                  </p>
-
-                </div>
 
               </div>
 
@@ -964,319 +1741,113 @@ function Booking() {
 
           </div>
 
+          {/* =================================================
+              RIGHT SIDE
+          ================================================= */}
 
-          {/* ====================================
-              RIGHT PRICE CARD
-          ==================================== */}
+          <aside className="min-w-0">
 
-          <aside>
+            <section className="sticky top-6 rounded-[28px] border border-gray-200 bg-white p-5 shadow-lg sm:p-6">
 
-            <section className="sticky top-6 rounded-[28px] border border-gray-200 bg-white p-6 shadow-lg">
+              {/* =================================================
+                  PROPERTY SUMMARY
+              ================================================= */}
 
-              {/* PROPERTY */}
-
-              <div className="flex gap-4">
-
-                {propertyImage ? (
-
-                  <img
-                    src={propertyImage}
-                    alt={
-                      property?.title ||
-                      "Property"
-                    }
-                    className="h-24 w-24 rounded-2xl object-cover"
-                  />
-
-                ) : (
-
-                  <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-gray-100">
-
-                    <HomeIcon />
-
-                  </div>
-
-                )}
-
-
-                <div>
-
-                  <h2 className="font-bold text-gray-900">
-                    {property?.title ||
-                      property?.name ||
-                      "Premium Apartment"}
-                  </h2>
-
-
-                  <p className="mt-2 text-sm text-gray-500">
-                    {property?.city ||
-                      "Chennai"}
-                  </p>
-
-                </div>
-
-              </div>
-
+              <PropertySummary
+                property={{
+                  ...property,
+                  image_url: propertyImage,
+                  image: propertyImage,
+                  images: propertyImages,
+                }}
+              />
 
               <div className="my-6 border-t" />
 
+              {/* =================================================
+                  PRICE DETAILS
+              ================================================= */}
 
-              {/* PRICE DETAILS */}
-
-              <h3 className="text-lg font-bold text-[#10213f]">
-                Price details
-              </h3>
-
-
-              {loadingPrice ? (
-
-                <div className="flex items-center gap-2 py-8 text-sm text-gray-500">
-
-                  <Loader2
-                    size={18}
-                    className="animate-spin"
-                  />
-
-                  Loading price...
-
-                </div>
-
-              ) : (
-
-                <div className="mt-5 space-y-4">
-
-                  {/* NIGHT PRICE */}
-
-                  <div className="flex justify-between text-sm">
-
-                    <span className="text-gray-600">
-
-                      {pricing?.currency ||
-                        "INR"}{" "}
-
-                      {formatCurrency(
-                        priceDetails.basePrice
-                      )}{" "}
-
-                      × {nights}{" "}
-                      {nights === 1
-                        ? "night"
-                        : "nights"}
-
-                    </span>
-
-
-                    <span className="font-medium">
-
-                      ₹
-                      {formatCurrency(
-                        priceDetails.basePrice *
-                        nights
-                      )}
-
-                    </span>
-
-                  </div>
-
-
-                  {/* CLEANING */}
-
-                  <div className="flex justify-between text-sm">
-
-                    <span className="text-gray-600">
-                      Cleaning fee
-                    </span>
-
-
-                    <span>
-                      ₹
-                      {formatCurrency(
-                        priceDetails.cleaningFee
-                      )}
-                    </span>
-
-                  </div>
-
-
-                  {/* SERVICE */}
-
-                  <div className="flex justify-between text-sm">
-
-                    <span className="text-gray-600">
-                      Service fee
-                    </span>
-
-
-                    <span>
-                      ₹
-                      {formatCurrency(
-                        priceDetails.serviceFee
-                      )}
-                    </span>
-
-                  </div>
-
-                  {priceDetails.guestFee > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">
-                        Extra guest fee
-                      </span>
-                      <span>
-                        ₹{formatCurrency(priceDetails.guestFee)}
-                      </span>
-                    </div>
-                  )}
-
-
-                  {/* TAX */}
-
-                  {priceDetails.tax > 0 && (
-
-                    <div className="flex justify-between text-sm">
-
-                      <span className="text-gray-600">
-                        Tax
-                      </span>
-
-
-                      <span>
-                        ₹
-                        {formatCurrency(
-                          priceDetails.tax
-                        )}
-                      </span>
-
-                    </div>
-
-                  )}
-
-                </div>
-
-              )}
-
+              <PriceDetails
+                pricing={pricing}
+                priceDetails={
+                  priceDetails
+                }
+                nights={nights}
+                loadingPrice={
+                  loadingPrice
+                }
+                formatCurrency={
+                  formatCurrency
+                }
+              />
 
               <div className="my-6 border-t" />
 
+              {/* =================================================
+                  AVAILABILITY
+              ================================================= */}
 
-              {/* TOTAL */}
+              <AvailabilityStatus
+                checkIn={checkIn}
+                checkOut={checkOut}
+                isDateAvailable={
+                  isDateAvailable
+                }
+                loadingAvailability={
+                  loadingAvailability
+                }
+              />
 
-              <div className="flex items-center justify-between">
-
-                <span className="font-bold">
-                  Total
-                </span>
-
-
-                <span className="text-xl font-bold">
-
-                  ₹
-                  {formatCurrency(
-                    priceDetails.total
-                  )}
-
-                </span>
-
-              </div>
-
-
-              {/* AVAILABILITY */}
-
-              {!loadingAvailability && (
-
-                <div
-                  className={`mt-4 flex items-center gap-2 rounded-xl px-3 py-2 text-sm ${
-                    isDateAvailable
-                      ? "bg-green-50 text-green-700"
-                      : "bg-red-50 text-red-600"
-                  }`}
-                >
-
-                  {!checkIn || !checkOut ? (
-                    <>
-                      <CalendarDays size={16} />
-                      Select dates to check availability
-                    </>
-                  ) : isDateAvailable ? (
-                    <>
-                      <span className="h-2 w-2 rounded-full bg-green-500" />
-
-                      Available for selected dates
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle size={16} />
-
-                      Selected dates unavailable
-                    </>
-                  )}
-
-                </div>
-
-              )}
-
-
-              {/* ERROR */}
+              {/* =================================================
+                  ERROR
+              ================================================= */}
 
               {error && (
-
                 <div className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-600">
-
                   {error}
-
                 </div>
-
               )}
 
+              {/* =================================================
+                  PAYMENT PROCESSING
+              ================================================= */}
 
-              {/* RESERVE */}
+              {paymentLoading && (
+                <div className="mt-4 rounded-xl bg-blue-50 p-3 text-sm text-blue-700">
+                  Processing your payment...
+                </div>
+              )}
 
-              <button
-                type="button"
-                disabled={
-                  bookingLoading ||
-                  loadingPrice ||
-                  loadingAvailability ||
-                  !isDateAvailable ||
-                  !priceDetails.total
-                }
-                onClick={
-                  handleReserve
-                }
-                className={`mt-6 flex h-14 w-full items-center justify-center rounded-xl text-base font-bold text-white transition ${
-                  bookingLoading ||
-                  loadingPrice ||
-                  loadingAvailability ||
-                  !isDateAvailable ||
-                  !priceDetails.total
-                    ? "cursor-not-allowed bg-gray-300"
-                    : "bg-[#e61e4d] hover:bg-[#d91545]"
-                }`}
-              >
+              {/* =================================================
+                  RESERVE
+              ================================================= */}
 
-                {bookingLoading ? (
+              <div className="mt-6">
 
-                  <>
-                    <Loader2
-                      size={20}
-                      className="mr-2 animate-spin"
-                    />
+                <ReserveButton
+                  bookingLoading={
+                    bookingLoading ||
+                    paymentLoading
+                  }
+                  loadingPrice={
+                    loadingPrice
+                  }
+                  loadingAvailability={
+                    loadingAvailability
+                  }
+                  isDateAvailable={
+                    isDateAvailable
+                  }
+                  total={
+                    priceDetails.total
+                  }
+                  onClick={
+                    handleReserve
+                  }
+                />
 
-                    Reserving...
-
-                  </>
-
-                ) : (
-
-                  "Reserve"
-
-                )}
-
-              </button>
-
-
-              <p className="mt-4 text-center text-xs text-gray-500">
-                You won't be charged yet
-              </p>
+              </div>
 
             </section>
 
@@ -1287,42 +1858,7 @@ function Booking() {
       </main>
 
     </div>
-
   );
 }
-
-
-/* ==========================================
-   HOME ICON
-========================================== */
-
-function HomeIcon() {
-
-  return (
-
-    <svg
-      width="30"
-      height="30"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className="text-gray-400"
-    >
-
-      <path
-        d="M3 10.5L12 3l9 7.5"
-      />
-
-      <path
-        d="M5 9.5V21h14V9.5"
-      />
-
-    </svg>
-
-  );
-
-}
-
 
 export default Booking;

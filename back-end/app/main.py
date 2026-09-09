@@ -59,6 +59,7 @@ from app.routers.wishlist_item import router as wishlist_item_router
 from app.routers.review import router as review_router
 from app.routers.user_report import router as user_report_router
 from app.routers.dispute import router as dispute_router
+from app.routers.host_penalty import router as host_penalty_router
 
 
 
@@ -165,6 +166,7 @@ app.include_router(wishlist_item_router)
 app.include_router( review_router)
 app.include_router(user_report_router)
 app.include_router(dispute_router)
+app.include_router(host_penalty_router)
 
 
 

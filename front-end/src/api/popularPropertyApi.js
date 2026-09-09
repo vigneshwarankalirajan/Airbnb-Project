@@ -1,11 +1,11 @@
-// import { getProperties } from "./propertiesApi";
+import { getProperties } from "./propertiesApi";
 
-// /* =====================================================
-//    POPULAR PROPERTIES
-// ===================================================== */
+/* =====================================================
+   POPULAR PROPERTIES
+===================================================== */
 
-// export const getPopularProperties = async () => {
-//   const response = await getProperties();
+export const getPopularProperties = async () => {
+  const response = await getProperties();
 
-//   return response;
-// };
+  return response;
+};

@@ -1,32 +1,130 @@
-import { Heart, MapPin, Star } from "lucide-react";
+"use client";
+
+import {
+  Heart,
+  MapPin,
+  Star,
+} from "lucide-react";
+
 import { useNavigate } from "react-router-dom";
+
+const fallbackImage =
+  "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=900&q=80";
 
 function CustomerPropertyCard({ property }) {
   const navigate = useNavigate();
-
-  const handlePropertyClick = () => {
-    if (!property?.id) {
-      console.error("Property ID is missing:", property);
-      return;
-    }
-
-    console.log("Opening property:", property.id);
-
-    navigate(`/property-details/${property.id}`);
-  };
-
-  const handleFavoriteClick = (e) => {
-    e.stopPropagation();
-
-    console.log("Favorite property:", property?.id);
-  };
 
   if (!property) {
     return null;
   }
 
+  /* =======================================================
+     PROPERTY ID
+  ======================================================= */
+
+  const propertyId =
+    property?.id ??
+    property?.property_id ??
+    property?.propertyId;
+
+  /* =======================================================
+     PROPERTY DATA
+  ======================================================= */
+
+  const title =
+    property?.title ??
+    property?.property_name ??
+    property?.name ??
+    "Property";
+
+  const image =
+    property?.image ??
+    property?.image_url ??
+    property?.imageUrl ??
+    property?.thumbnail ??
+    property?.thumbnail_url ??
+    property?.images?.[0]?.url ??
+    property?.images?.[0]?.image_url ??
+    fallbackImage;
+
+  const address =
+    property?.address ??
+    property?.location ??
+    property?.location_name ??
+    "";
+
+  const city = property?.city ?? "";
+
+  const location =
+    address && city && address !== city
+      ? `${address}, ${city}`
+      : address || city || "Location unavailable";
+
+  const rating =
+    property?.rating ??
+    property?.average_rating ??
+    null;
+
+  const guests =
+    property?.max_guests ??
+    property?.maximum_guests ??
+    property?.guests ??
+    property?.capacity ??
+    0;
+
+  const bedrooms =
+    property?.bedrooms ??
+    property?.bedroom_count ??
+    0;
+
+  const bathrooms =
+    property?.bathrooms ??
+    property?.bathroom_count ??
+    property?.baths ??
+    0;
+
+  /* =======================================================
+     PROPERTY CLICK
+  ======================================================= */
+
+  const handlePropertyClick = () => {
+    if (
+      propertyId === undefined ||
+      propertyId === null
+    ) {
+      console.error(
+        "Property ID is missing:",
+        property
+      );
+
+      return;
+    }
+
+    console.log(
+      "Opening property:",
+      propertyId
+    );
+
+    navigate(
+      `/property-details/${propertyId}`
+    );
+  };
+
+  /* =======================================================
+     FAVORITE CLICK
+  ======================================================= */
+
+  const handleFavoriteClick = (event) => {
+    event.stopPropagation();
+
+    console.log(
+      "Favorite property:",
+      propertyId
+    );
+  };
+
   return (
-    <div
+    <article
       onClick={handlePropertyClick}
       className="
         group
@@ -34,7 +132,10 @@ function CustomerPropertyCard({ property }) {
         overflow-hidden
       "
     >
-      {/* IMAGE */}
+      {/* =================================================
+          IMAGE
+      ================================================= */}
+
       <div
         className="
           relative
@@ -45,29 +146,34 @@ function CustomerPropertyCard({ property }) {
         "
       >
         <img
-          src={
-            property.image ||
-            "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1000&q=80"
-          }
-          alt={property.title || "Property"}
+          src={image}
+          alt={title}
+          loading="lazy"
           className="
             h-full
             w-full
             object-cover
-            transition
+            transition-transform
             duration-500
+            ease-out
             group-hover:scale-105
           "
+          onError={(event) => {
+            event.currentTarget.src =
+              fallbackImage;
+          }}
         />
 
         {/* FAVORITE */}
+
         <button
           type="button"
           onClick={handleFavoriteClick}
+          aria-label="Add property to wishlist"
           className="
             absolute
-            right-4
-            top-4
+            right-3
+            top-3
             flex
             h-10
             w-10
@@ -75,19 +181,22 @@ function CustomerPropertyCard({ property }) {
             justify-center
             rounded-full
             bg-white/95
-            shadow-md
+            shadow-sm
+            backdrop-blur
             transition
             hover:scale-105
           "
         >
           <Heart
             size={19}
+            strokeWidth={1.8}
             className="text-gray-700"
           />
         </button>
 
         {/* PROPERTY TYPE */}
-        {property.property_type && (
+
+        {property?.property_type && (
           <div
             className="
               absolute
@@ -101,6 +210,7 @@ function CustomerPropertyCard({ property }) {
               font-semibold
               text-gray-800
               shadow-sm
+              backdrop-blur
             "
           >
             {property.property_type}
@@ -108,96 +218,118 @@ function CustomerPropertyCard({ property }) {
         )}
       </div>
 
-      {/* DETAILS */}
-      <div className="mt-4">
+      {/* =================================================
+          CONTENT
+      ================================================= */}
 
+      <div className="mt-4">
         {/* TITLE + RATING */}
-        <div
-          className="
-            flex
-            items-start
-            justify-between
-            gap-3
-          "
-        >
+
+        <div className="flex items-start justify-between gap-3">
           <h3
             className="
-              line-clamp-1
-              text-base
+              min-w-0
+              flex-1
+              truncate
+              text-[17px]
               font-semibold
+              leading-6
               text-gray-900
             "
           >
-            {property.title || "Untitled Property"}
+            {title}
           </h3>
 
-          <div
-            className="
-              flex
-              shrink-0
-              items-center
-              gap-1
-              text-sm
-              text-gray-500
-            "
-          >
-            <Star size={14} />
+          <div className="flex shrink-0 items-center gap-1">
+            <Star
+              size={15}
+              fill="currentColor"
+              className="text-gray-900"
+            />
 
-            <span>New</span>
+            <span className="text-sm font-medium text-gray-800">
+              {rating !== null &&
+              rating !== undefined &&
+              rating !== ""
+                ? rating
+                : "New"}
+            </span>
           </div>
         </div>
 
         {/* LOCATION */}
+
         <div
           className="
-            mt-1
+            mt-1.5
             flex
-            items-center
-            gap-1
+            items-start
+            gap-1.5
             text-sm
             text-gray-500
           "
         >
-          <MapPin size={14} />
+          <MapPin
+            size={15}
+            className="mt-0.5 shrink-0"
+          />
 
-          <span>
-            {property.address || property.city || "Location unavailable"}
-            {property.address && property.city
-              ? `, ${property.city}`
-              : ""}
+          <span className="line-clamp-2">
+            {location}
           </span>
         </div>
 
-        {/* PROPERTY INFO */}
+        {/* DETAILS */}
+
         <div
           className="
-            mt-2
+            mt-2.5
             flex
             flex-wrap
             items-center
-            gap-2
+            gap-x-2
+            gap-y-1
             text-sm
             text-gray-500
           "
         >
           <span>
-            {property.max_guests || 0} guests
+            {guests} guests
           </span>
 
           <span>·</span>
 
           <span>
-            {property.bedrooms || 0} bedrooms
+            {bedrooms} bedrooms
           </span>
 
           <span>·</span>
 
           <span>
-            {property.bathrooms || 0} baths
+            {bathrooms} baths
           </span>
         </div>
+
+        {/* PRICE */}
+
+        {property?.price !== null &&
+          property?.price !== undefined &&
+          property?.price !== "" && (
+            <div className="mt-3">
+              <span className="text-base font-semibold text-gray-900">
+                ₹
+                {Number(
+                  property.price
+                ).toLocaleString("en-IN")}
+              </span>
+
+              <span className="ml-1 text-sm text-gray-500">
+                night
+              </span>
+            </div>
+          )}
       </div>
-    </div>
+    </article>
   );
 }
 

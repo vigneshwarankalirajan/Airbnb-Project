@@ -4,35 +4,43 @@ const apiClient = axios.create({
   baseURL: "http://127.0.0.1:8000",
   headers: {
     "Content-Type": "application/json",
+    Accept: "application/json",
   },
 });
 
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      config.headers = config.headers || {};
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error("API Error:", {
-      url: error?.config?.url,
-      method: error?.config?.method,
-      status: error?.response?.status,
-      response: error?.response?.data,
+export const getPaymentMethods = async (params = {}) => {
+  try {
+    const response = await apiClient.get("/payment-methods/", {
+      params,
     });
 
-    return Promise.reject(error);
+    return response.data;
+  } catch (error) {
+    console.error(
+      "GET PAYMENT METHODS ERROR:",
+      error?.response?.data || error?.message
+    );
+
+    throw error;
   }
-);
+};
+
+export const createPaymentMethod = async (data) => {
+  try {
+    const response = await apiClient.post(
+      "/payment-methods/",
+      data
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error(
+      "CREATE PAYMENT METHOD ERROR:",
+      error?.response?.data || error?.message
+    );
+
+    throw error;
+  }
+};
 
 export default apiClient;

@@ -17,6 +17,7 @@ import Register from "./Pages/Register/Register";
 
 import PropertyDetails from "./Pages/PropertyDetails/PropertyDetails";
 
+// Booking
 import Booking from "./Pages/Booking/Booking";
 import BookingConfirmation from "./Pages/Booking/BookingConfirmation";
 import Bookings from "./Pages/Bookings";
@@ -31,17 +32,19 @@ import WhyChooseUsDetails from "./Pages/WhyChooseUsDetails";
 import Location from "./Pages/Location/Location";
 import DestinationProperties from "./Pages/DestinationProperties/DestinationProperties";
 
-// // Host Pages
+// Host
 import BecomeHost from "./Pages/BecomeHost/BecomeHost";
 import HostPropertyDetails from "./Pages/BecomeHost/HostPropertyDetails";
 import HostPricing from "./Pages/BecomeHost/HostPricing";
 import HostAvailability from "./Pages/BecomeHost/HostAvailability";
-
 import HostAmenities from "./Pages/BecomeHost/HostAmenities";
 import HostPropertyImages from "./Pages/BecomeHost/HostPropertyImages";
 import ReviewPublish from "./Pages/BecomeHost/ReviewPublish";
+
 import HostDashboard from "./Pages/HostDashboard/HostDashboard";
 import PlatformOperations from "./Pages/PlatformOperations";
+
+import AdminDashboard from "./Pages/Admin/AdminDashboard";
 
 function App() {
   return (
@@ -92,26 +95,18 @@ function App() {
             PROPERTY DETAILS
         ================================= */}
         <Route
-          path="/property-details/:id"
-          element={<PropertyDetails />}
-        />
+           path="/property-details/:id"
+            element={<PropertyDetails />}
+          />
+       <Route
+  path="/booking/:id"
+  element={<Booking />}
+/>
 
-        {/* ================================
-            BOOKING
-        ================================= */}
-        <Route
-          path="/booking/:id"
-          element={<Booking />}
-        />
-
-        {/* ================================
-            BOOKING CONFIRMATION
-        ================================= */}
-        <Route
-          path="/booking-confirmation/:bookingId"
+       <Route
+         path="/booking-confirmation/:bookingId"
           element={<BookingConfirmation />}
-        />
-
+         />
         <Route
           path="/bookings"
           element={<Bookings />}
@@ -256,6 +251,11 @@ function App() {
         <Route
           path="/become-host/review"
           element={<ReviewPublish />}
+        />
+
+        <Route
+         path="/admin/dashboard"
+         element={<AdminDashboard />}
         />
        
 

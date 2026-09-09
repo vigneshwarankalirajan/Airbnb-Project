@@ -1,47 +1,26 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Loader2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
-import CustomerPropertyCard from "./CustomerPropertyCard";
 import { getPopularProperties } from "../../api/popularPropertyApi";
 import { getPricing } from "../../api/pricingApi";
-import CustomerPopularityInformation from "./popularity/CustomerPopularityInformation";
 
-/* =====================================================
-   ANIMATIONS
-===================================================== */
+import CustomerPropertyCard from "./CustomerPropertyCard";
 
-const fadeUp = {
-  hidden: {
-    opacity: 0,
-    y: 35,
-  },
+const fallbackImages = [
+  "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1600607688969-a5bfcd646154?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1584132967334-10e028bd69f7?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1600607688969-a5bfcd646154?auto=format&fit=crop&w=900&q=80",
+];
 
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.6,
-      ease: "easeOut",
-    },
-  },
-};
-
-const staggerContainer = {
-  hidden: {},
-
-  visible: {
-    transition: {
-      staggerChildren: 0.12,
-    },
-  },
-};
-
-/* =====================================================
-   PROPERTY ID
-===================================================== */
+/* =========================================================
+   GET PROPERTY ID
+========================================================= */
 
 const getPropertyId = (property, index) => {
   return (
@@ -52,9 +31,9 @@ const getPropertyId = (property, index) => {
   );
 };
 
-/* =====================================================
-   PROPERTY TITLE
-===================================================== */
+/* =========================================================
+   GET PROPERTY TITLE
+========================================================= */
 
 const getPropertyTitle = (property) => {
   return (
@@ -65,25 +44,32 @@ const getPropertyTitle = (property) => {
   );
 };
 
-/* =====================================================
-   PROPERTY LOCATION
-===================================================== */
+/* =========================================================
+   GET LOCATION
+========================================================= */
 
 const getPropertyLocation = (property) => {
-  return (
+  const address =
+    property?.address ??
     property?.location ??
-    property?.city ??
     property?.location_name ??
-    "Location unavailable"
-  );
+    "";
+
+  const city = property?.city ?? "";
+
+  if (address && city && address !== city) {
+    return `${address}, ${city}`;
+  }
+
+  return address || city || "Location unavailable";
 };
 
-/* =====================================================
-   PROPERTY IMAGE
-===================================================== */
+/* =========================================================
+   GET IMAGE
+========================================================= */
 
-const getPropertyImage = (property) => {
-  return (
+const getPropertyImage = (property, index) => {
+  const image =
     property?.image ??
     property?.image_url ??
     property?.imageUrl ??
@@ -91,25 +77,34 @@ const getPropertyImage = (property) => {
     property?.thumbnail_url ??
     property?.images?.[0]?.url ??
     property?.images?.[0]?.image_url ??
-    ""
-  );
+    "";
+
+  return image || fallbackImages[index % fallbackImages.length];
 };
 
-/* =====================================================
+/* =========================================================
    NORMALIZE PROPERTY
-===================================================== */
+========================================================= */
 
-const normalizeProperty = (property, index) => {
+const normalizeProperty = (property, index, pricingMap) => {
+  const propertyId = getPropertyId(property, index);
+
+  const pricing = pricingMap[propertyId];
+
   return {
     ...property,
 
-    id: getPropertyId(property, index),
+    id: propertyId,
 
     title: getPropertyTitle(property),
 
     location: getPropertyLocation(property),
 
-    image: getPropertyImage(property),
+    address: property?.address ?? "",
+
+    city: property?.city ?? "",
+
+    image: getPropertyImage(property, index),
 
     rating:
       property?.rating ??
@@ -120,12 +115,14 @@ const normalizeProperty = (property, index) => {
       property?.price ??
       property?.price_per_night ??
       property?.pricePerNight ??
+      pricing?.price ??
+      pricing?.price_per_night ??
       null,
 
-    guests:
-      property?.guests ??
+    max_guests:
       property?.max_guests ??
       property?.maximum_guests ??
+      property?.guests ??
       property?.capacity ??
       0,
 
@@ -134,167 +131,197 @@ const normalizeProperty = (property, index) => {
       property?.bedroom_count ??
       0,
 
-    baths:
-      property?.baths ??
+    bathrooms:
       property?.bathrooms ??
       property?.bathroom_count ??
+      property?.baths ??
       0,
+
+    property_type:
+      property?.property_type ??
+      property?.type ??
+      "",
   };
 };
 
-/* =====================================================
+/* =========================================================
+   GET API ARRAY
+========================================================= */
+
+const extractPropertyList = (response) => {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  if (Array.isArray(response?.data)) {
+    return response.data;
+  }
+
+  if (Array.isArray(response?.properties)) {
+    return response.properties;
+  }
+
+  if (Array.isArray(response?.results)) {
+    return response.results;
+  }
+
+  if (Array.isArray(response?.items)) {
+    return response.items;
+  }
+
+  if (Array.isArray(response?.data?.properties)) {
+    return response.data.properties;
+  }
+
+  if (Array.isArray(response?.data?.items)) {
+    return response.data.items;
+  }
+
+  return [];
+};
+
+/* =========================================================
    COMPONENT
-===================================================== */
+========================================================= */
 
 function CustomerPopularProperties() {
+  const navigate = useNavigate();
+
   const [properties, setProperties] = useState([]);
-
   const [loading, setLoading] = useState(true);
-
   const [error, setError] = useState("");
-  const [pricingByProperty, setPricingByProperty] = useState({});
 
-  /* ===================================================
-     LOAD PROPERTIES
-  =================================================== */
+  /* =======================================================
+     LOAD POPULAR PROPERTIES
+  ======================================================= */
 
   useEffect(() => {
-    let mounted = true;
+    let isMounted = true;
 
-    const loadPopularProperties = async () => {
+    const loadProperties = async () => {
       try {
         setLoading(true);
         setError("");
 
-        const response =
-          await getPopularProperties();
+        /* -----------------------------------------------
+           GET POPULAR PROPERTIES
+        ------------------------------------------------ */
+
+        const propertyResponse = await getPopularProperties();
+
+        /* -----------------------------------------------
+           GET PRICING
+        ------------------------------------------------ */
 
         let pricingMap = {};
+
         try {
           const pricingResponse = await getPricing();
+
           const pricingList = Array.isArray(pricingResponse)
             ? pricingResponse
-            : pricingResponse?.data || pricingResponse?.items || [];
+            : Array.isArray(pricingResponse?.data)
+              ? pricingResponse.data
+              : Array.isArray(pricingResponse?.items)
+                ? pricingResponse.items
+                : Array.isArray(pricingResponse?.results)
+                  ? pricingResponse.results
+                  : [];
 
           pricingList.forEach((pricing) => {
-            if (pricing?.property_id) {
-              pricingMap[pricing.property_id] = pricing;
+            const propertyId =
+              pricing?.property_id ??
+              pricing?.propertyId ??
+              pricing?.property?.id;
+
+            if (propertyId !== undefined && propertyId !== null) {
+              pricingMap[propertyId] = pricing;
             }
           });
         } catch (pricingError) {
-          console.error("Popular property pricing API error:", pricingError);
+          /*
+            Pricing API failure should NOT break
+            Popular Properties.
+          */
+          console.error(
+            "Pricing API Error:",
+            pricingError
+          );
         }
 
-        if (!mounted) {
+        /* -----------------------------------------------
+           EXTRACT PROPERTIES
+        ------------------------------------------------ */
+
+        const propertyList =
+          extractPropertyList(propertyResponse);
+
+        /* -----------------------------------------------
+           NORMALIZE
+        ------------------------------------------------ */
+
+        const formattedProperties = propertyList
+          .map((property, index) =>
+            normalizeProperty(
+              property,
+              index,
+              pricingMap
+            )
+          )
+          .slice(0, 6);
+
+        if (!isMounted) {
           return;
         }
 
-        /* =============================================
-           HANDLE DIFFERENT API RESPONSE FORMATS
-        ============================================= */
-
-        let propertyList = [];
-
-        if (Array.isArray(response)) {
-          propertyList = response;
-        } else if (
-          Array.isArray(response?.data)
-        ) {
-          propertyList = response.data;
-        } else if (
-          Array.isArray(response?.properties)
-        ) {
-          propertyList = response.properties;
-        } else if (
-          Array.isArray(response?.results)
-        ) {
-          propertyList = response.results;
-        } else if (
-          Array.isArray(response?.items)
-        ) {
-          propertyList = response.items;
-        } else if (
-          Array.isArray(
-            response?.data?.properties
-          )
-        ) {
-          propertyList =
-            response.data.properties;
-        } else if (
-          Array.isArray(
-            response?.data?.items
-          )
-        ) {
-          propertyList =
-            response.data.items;
-        }
-
-        /* =============================================
-           NORMALIZE + LIMIT
-        ============================================= */
-
-        const formattedProperties =
-          propertyList
-            .map((property, index) =>
-              normalizeProperty(
-                property,
-                index
-              )
-            )
-            .slice(0, 6);
-
-          setPricingByProperty(pricingMap);
-        setProperties(
-          formattedProperties
-        );
+        setProperties(formattedProperties);
       } catch (err) {
         console.error(
           "Popular Properties API Error:",
-          err?.response?.data ||
-            err?.message ||
-            err
+          err
         );
 
-        if (!mounted) {
+        if (!isMounted) {
           return;
         }
 
         setError(
-          err?.response?.data?.detail ||
-            err?.response?.data?.message ||
-            err?.message ||
-            "Unable to load properties."
+          err?.response?.data?.detail ??
+          err?.response?.data?.message ??
+          err?.message ??
+          "Unable to load popular properties."
         );
+
+        setProperties([]);
       } finally {
-        if (mounted) {
+        if (isMounted) {
           setLoading(false);
         }
       }
     };
 
-    loadPopularProperties();
+    loadProperties();
 
     return () => {
-      mounted = false;
+      isMounted = false;
     };
   }, []);
 
-  /* ===================================================
-     LOADING
-  =================================================== */
+  /* =======================================================
+     VIEW ALL
+  ======================================================= */
+
+  const handleViewAll = () => {
+    navigate("/properties");
+  };
+
+  /* =======================================================
+     LOADING UI
+  ======================================================= */
 
   if (loading) {
     return (
-      <motion.section
-        className="py-16"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{
-          once: true,
-          amount: 0.15,
-        }}
-        variants={fadeUp}
-      >
+      <section className="py-12 sm:py-16">
         <div className="mb-8 flex items-end justify-between">
           <div>
             <p className="mb-2 text-sm font-semibold uppercase tracking-wider text-[#123d78]">
@@ -311,18 +338,7 @@ function CustomerPopularProperties() {
           </div>
         </div>
 
-        <div
-          className="
-            flex
-            min-h-[300px]
-            items-center
-            justify-center
-            rounded-2xl
-            border
-            border-gray-100
-            bg-gray-50
-          "
-        >
+        <div className="flex min-h-[280px] w-full items-center justify-center rounded-2xl border border-gray-100 bg-gray-50">
           <div className="flex items-center gap-3 text-gray-500">
             <Loader2
               size={22}
@@ -334,26 +350,17 @@ function CustomerPopularProperties() {
             </span>
           </div>
         </div>
-      </motion.section>
+      </section>
     );
   }
 
-  /* ===================================================
-     ERROR
-  =================================================== */
+  /* =======================================================
+     ERROR UI
+  ======================================================= */
 
   if (error) {
     return (
-      <motion.section
-        className="py-16"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{
-          once: true,
-          amount: 0.15,
-        }}
-        variants={fadeUp}
-      >
+      <section className="py-12 sm:py-16">
         <div className="mb-8">
           <p className="mb-2 text-sm font-semibold uppercase tracking-wider text-[#123d78]">
             Discover
@@ -368,41 +375,22 @@ function CustomerPopularProperties() {
           </p>
         </div>
 
-        <div
-          className="
-            rounded-2xl
-            border
-            border-red-100
-            bg-red-50
-            px-6
-            py-10
-            text-center
-          "
-        >
+        <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-10 text-center">
           <p className="text-sm font-medium text-red-600">
             {error}
           </p>
         </div>
-      </motion.section>
+      </section>
     );
   }
 
-  /* ===================================================
-     EMPTY
-  =================================================== */
+  /* =======================================================
+     EMPTY UI
+  ======================================================= */
 
   if (!properties.length) {
     return (
-      <motion.section
-        className="py-16"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{
-          once: true,
-          amount: 0.15,
-        }}
-        variants={fadeUp}
-      >
+      <section className="py-12 sm:py-16">
         <div className="mb-8">
           <p className="mb-2 text-sm font-semibold uppercase tracking-wider text-[#123d78]">
             Discover
@@ -417,43 +405,22 @@ function CustomerPopularProperties() {
           </p>
         </div>
 
-        <div
-          className="
-            rounded-2xl
-            border
-            border-gray-100
-            bg-gray-50
-            px-6
-            py-10
-            text-center
-          "
-        >
+        <div className="rounded-2xl border border-gray-100 bg-gray-50 px-6 py-10 text-center">
           <p className="text-sm text-gray-500">
             No properties available.
           </p>
         </div>
-      </motion.section>
+      </section>
     );
   }
 
-  /* ===================================================
+  /* =======================================================
      MAIN UI
-  =================================================== */
+  ======================================================= */
 
   return (
-    <motion.section
-      className="py-16"
-      initial="hidden"
-      whileInView="visible"
-      viewport={{
-        once: true,
-        amount: 0.15,
-      }}
-      variants={fadeUp}
-    >
-      {/* =================================================
-          HEADER
-      ================================================= */}
+    <section className="py-12 sm:py-16">
+      {/* HEADER */}
 
       <div className="mb-8 flex items-end justify-between">
         <div>
@@ -470,8 +437,11 @@ function CustomerPopularProperties() {
           </p>
         </div>
 
+        {/* DESKTOP VIEW ALL */}
+
         <button
           type="button"
+          onClick={handleViewAll}
           className="
             hidden
             items-center
@@ -489,48 +459,58 @@ function CustomerPopularProperties() {
         </button>
       </div>
 
-      {/* =================================================
-          PROPERTY GRID
-      ================================================= */}
+      {/* PROPERTY GRID */}
 
-      <motion.div
+      <div
         className="
           grid
           grid-cols-1
-          gap-7
+          gap-x-6
+          gap-y-10
           sm:grid-cols-2
           lg:grid-cols-3
         "
-        variants={staggerContainer}
       >
-        {properties.map(
-          (property, index) => (
-            <motion.div
-              key={
-                property.id ??
-                property.property_id ??
-                index
-              }
-              variants={fadeUp}
-              whileHover={{
-                y: -6,
-              }}
-              transition={{
-                duration: 0.25,
-              }}
-            >
-              <CustomerPropertyCard
-                property={property}
-              />
-              <CustomerPopularityInformation
-                property={property}
-                pricing={pricingByProperty[property.id]}
-              />
-            </motion.div>
-          )
-        )}
-      </motion.div>
-    </motion.section>
+        {properties.map((property, index) => (
+          <CustomerPropertyCard
+            key={
+              property?.id ??
+              property?.property_id ??
+              index
+            }
+            property={property}
+          />
+        ))}
+      </div>
+
+      {/* MOBILE VIEW ALL */}
+
+      <div className="mt-10 flex justify-center sm:hidden">
+        <button
+          type="button"
+          onClick={handleViewAll}
+          className="
+            inline-flex
+            items-center
+            gap-2
+            rounded-full
+            border
+            border-gray-200
+            px-5
+            py-2.5
+            text-sm
+            font-semibold
+            text-gray-800
+            transition
+            hover:border-[#123d78]
+            hover:text-[#123d78]
+          "
+        >
+          View all properties
+          <ArrowRight size={16} />
+        </button>
+      </div>
+    </section>
   );
 }
 

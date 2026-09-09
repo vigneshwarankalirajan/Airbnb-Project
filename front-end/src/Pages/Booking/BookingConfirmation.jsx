@@ -1,172 +1,324 @@
-import React, { useEffect, useState } from "react";
+import React, {
+  useEffect,
+  useState,
+} from "react";
+
 import {
-  CheckCircle,
+  ArrowRight,
   CalendarDays,
+  CheckCircle2,
+  MapPin,
   Users,
-  Home,
-  ArrowLeft,
-  Loader2,
-  AlertCircle,
 } from "lucide-react";
+
 import {
+  useLocation,
   useNavigate,
   useParams,
-  useLocation,
 } from "react-router-dom";
-import axios from "axios";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL =
+  "http://127.0.0.1:8000";
 
 function BookingConfirmation() {
-  const navigate = useNavigate();
-  const { bookingId } = useParams();
-  const location = useLocation();
+  const { bookingId } =
+    useParams();
 
-  const [booking, setBooking] = useState(
-    location.state?.booking || null
-  );
+  const location =
+    useLocation();
 
-  const [property, setProperty] = useState(
-    location.state?.property || null
-  );
+  const navigate =
+    useNavigate();
 
-  const [loading, setLoading] = useState(!booking);
-  const [error, setError] = useState("");
+  const [booking, setBooking] =
+    useState(
+      location.state?.booking ||
+        null
+    );
 
-  // =====================================================
-  // LOAD BOOKING
-  // =====================================================
+  const [property, setProperty] =
+    useState(
+      location.state?.property ||
+        null
+    );
+
+  const [loading, setLoading] =
+    useState(!location.state?.booking);
+
+  const [error, setError] =
+    useState("");
+
+  // =========================================================
+  // FETCH BOOKING
+  // =========================================================
 
   useEffect(() => {
     if (!bookingId) {
-      setError("Booking ID is missing.");
+      setError(
+        "Booking ID is missing."
+      );
+
+      setLoading(false);
+
+      return;
+    }
+
+    /*
+     * If state already contains booking,
+     * we can display immediately.
+     */
+
+    if (
+      location.state?.booking
+    ) {
       setLoading(false);
       return;
     }
 
-    const loadBooking = async () => {
-      try {
-        setLoading(true);
-        setError("");
+    const fetchBooking =
+      async () => {
+        try {
+          setLoading(true);
 
-        const response = await axios.get(
-          `${API_URL}/bookings/${bookingId}`
-        );
+          const response =
+            await fetch(
+              `${API_URL}/bookings/${bookingId}`
+            );
 
-        console.log("Booking confirmation API:", response.data);
+          const text =
+            await response.text();
 
-        setBooking(response.data);
+          let data = null;
 
-        // =================================================
-        // LOAD PROPERTY USING property_id
-        // =================================================
-
-        if (response.data?.property_id) {
           try {
-            const propertyResponse = await axios.get(
-              `${API_URL}/properties/${response.data.property_id}`
-            );
+            data =
+              text
+                ? JSON.parse(text)
+                : null;
+          } catch {
+            data = text;
+          }
 
-            console.log(
-              "Property confirmation API:",
-              propertyResponse.data
-            );
-
-            setProperty(propertyResponse.data);
-          } catch (propertyError) {
-            console.error(
-              "Property API Error:",
-              propertyError
+          if (!response.ok) {
+            throw new Error(
+              data?.detail ||
+                data?.message ||
+                "Unable to load booking."
             );
           }
+
+          const bookingData =
+            data?.data ||
+            data?.booking ||
+            data;
+
+          setBooking(
+            bookingData
+          );
+
+          /*
+           * Property may already be
+           * inside booking response.
+           */
+
+          if (
+            bookingData?.property
+          ) {
+            setProperty(
+              bookingData.property
+            );
+          }
+
+          /*
+           * Otherwise fetch property.
+           */
+
+          const propertyId =
+            bookingData?.property_id;
+
+          if (
+            propertyId &&
+            !bookingData?.property
+          ) {
+            const propertyResponse =
+              await fetch(
+                `${API_URL}/properties/${propertyId}`
+              );
+
+            if (
+              propertyResponse.ok
+            ) {
+              const propertyData =
+                await propertyResponse.json();
+
+              setProperty(
+                propertyData?.data ||
+                  propertyData?.property ||
+                  propertyData
+              );
+            }
+          }
+        } catch (err) {
+          console.error(
+            "CONFIRMATION ERROR:",
+            err
+          );
+
+          /*
+           * Local fallback.
+           */
+
+          const saved =
+            localStorage.getItem(
+              "last_booking"
+            );
+
+          if (saved) {
+            try {
+              setBooking(
+                JSON.parse(saved)
+              );
+            } catch {
+              setError(
+                err.message ||
+                  "Unable to load booking."
+              );
+            }
+          } else {
+            setError(
+              err.message ||
+                "Unable to load booking."
+            );
+          }
+        } finally {
+          setLoading(false);
         }
-      } catch (err) {
-        console.error(
-          "Booking Confirmation API Error:",
-          err
-        );
+      };
 
-        setError(
-          err?.response?.data?.detail ||
-            "Unable to load booking details."
-        );
-      } finally {
-        setLoading(false);
+    fetchBooking();
+  }, [
+    bookingId,
+    location.state,
+  ]);
+
+  // =========================================================
+  // HELPERS
+  // =========================================================
+
+  const formatDate = (
+    value
+  ) => {
+    if (!value) return "-";
+
+    const date =
+      new Date(value);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return value;
+    }
+
+    return date.toLocaleDateString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
       }
-    };
+    );
+  };
 
-    loadBooking();
-  }, [bookingId]);
+  const formatPrice = (
+    value
+  ) =>
+    Number(
+      value || 0
+    ).toLocaleString(
+      "en-IN"
+    );
 
-  // =====================================================
+  // =========================================================
   // LOADING
-  // =====================================================
+  // =========================================================
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f7f7f7]">
-        <div className="text-center">
-          <Loader2
-            size={42}
-            className="mx-auto animate-spin text-[#e61e4d]"
-          />
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
 
-          <p className="mt-4 text-sm font-medium text-gray-500">
-            Loading your booking...
+        <div className="text-center">
+
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-[#123d78]" />
+
+          <p className="mt-4 text-sm text-gray-500">
+            Loading booking...
           </p>
+
         </div>
+
       </div>
     );
   }
 
-  // =====================================================
+  // =========================================================
   // ERROR
-  // =====================================================
+  // =========================================================
 
-  if (error || !booking) {
+  if (error && !booking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f7f7f7] px-5">
-        <div className="w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-            <AlertCircle
-              size={34}
-              className="text-red-500"
-            />
-          </div>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
 
-          <h1 className="mt-5 text-xl font-bold text-gray-900">
-            Booking details unavailable
+        <div className="w-full max-w-md rounded-[28px] bg-white p-8 text-center shadow-lg">
+
+          <h1 className="text-xl font-bold text-gray-900">
+            Booking not found
           </h1>
 
-          <p className="mt-2 text-sm text-gray-500">
-            {error || "Unable to find this booking."}
+          <p className="mt-3 text-sm text-gray-500">
+            {error}
           </p>
 
           <button
             type="button"
-            onClick={() => navigate("/")}
-            className="mt-6 rounded-xl bg-[#e61e4d] px-6 py-3 text-sm font-semibold text-white hover:bg-[#d91545]"
+            onClick={() =>
+              navigate("/")
+            }
+            className="mt-6 rounded-full bg-[#123d78] px-6 py-3 text-sm font-bold text-white"
           >
             Go Home
           </button>
+
         </div>
+
       </div>
     );
   }
 
-  // =====================================================
-  // BOOKING DATA
-  // =====================================================
+  // =========================================================
+  // DATA
+  // =========================================================
+
+  const propertyTitle =
+    property?.title ||
+    property?.name ||
+    booking?.property_title ||
+    "Your property";
+
+  const city =
+    property?.city ||
+    property?.location?.city ||
+    booking?.city ||
+    "";
 
   const checkIn =
     booking?.check_in ||
-    location.state?.checkIn ||
-    "";
+    location.state?.checkIn;
 
   const checkOut =
     booking?.check_out ||
-    location.state?.checkOut ||
-    "";
+    location.state?.checkOut;
 
   const guestCount =
     booking?.guest_count ||
@@ -178,303 +330,193 @@ function BookingConfirmation() {
     location.state?.totalAmount ||
     0;
 
-  const currency =
-    booking?.currency || "INR";
-
-  const bookingStatus =
-    booking?.booking_status || "pending";
-
-  const propertyName =
-    property?.title ||
-    property?.name ||
-    location.state?.property?.title ||
-    location.state?.property?.name ||
-    "Your reservation";
-
-  const propertyCity =
-    property?.city ||
-    location.state?.property?.city ||
-    "";
-
-  const propertyImage =
+  const image =
     property?.image_url ||
     property?.image ||
-    location.state?.property?.image_url ||
-    location.state?.property?.image ||
-    "";
+    property?.images?.[0]?.image_url ||
+    property?.images?.[0]?.url ||
+    "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1200&q=85";
 
-  // =====================================================
-  // STATUS
-  // =====================================================
-
-  const isConfirmed =
-    bookingStatus === "confirmed";
+  // =========================================================
+  // UI
+  // =========================================================
 
   return (
-    <div className="min-h-screen bg-[#f7f7f7]">
+    <div className="min-h-screen bg-gray-50 px-4 py-10 sm:px-6 lg:px-8">
 
-      {/* =================================================
-          HEADER
-      ================================================= */}
+      <div className="mx-auto max-w-3xl">
 
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-6xl items-center px-4 py-5">
+        {/* SUCCESS */}
 
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 text-sm font-medium text-gray-700 transition hover:text-black"
-          >
-            <ArrowLeft size={20} />
-            Home
-          </button>
+        <div className="text-center">
 
-        </div>
-      </header>
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
 
-      {/* =================================================
-          MAIN
-      ================================================= */}
-
-      <main className="mx-auto max-w-4xl px-4 py-10">
-
-        {/* =================================================
-            SUCCESS
-        ================================================= */}
-
-        <section className="rounded-3xl bg-white p-8 text-center shadow-sm sm:p-12">
-
-          <div
-            className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full ${
-              isConfirmed
-                ? "bg-green-100"
-                : "bg-yellow-100"
-            }`}
-          >
-            <CheckCircle
-              size={46}
-              className={
-                isConfirmed
-                  ? "text-green-600"
-                  : "text-yellow-600"
-              }
+            <CheckCircle2
+              size={48}
+              className="text-green-600"
             />
+
           </div>
 
           <h1 className="mt-6 text-3xl font-bold text-gray-900">
-            {isConfirmed
-              ? "Booking confirmed!"
-              : "Booking request received!"}
+            Booking confirmed!
           </h1>
 
-          <p className="mt-3 text-gray-500">
-            {isConfirmed
-              ? "Your reservation has been successfully confirmed."
-              : "Your reservation has been successfully created and is pending confirmation."}
+          <p className="mt-2 text-sm text-gray-500">
+            Your reservation has been successfully created.
           </p>
 
-          {bookingId && (
-            <p className="mt-4 text-sm text-gray-500">
-              Booking ID:
+          <p className="mt-3 text-sm font-bold text-[#123d78]">
+            Booking ID: #{bookingId}
+          </p>
 
-              <span className="ml-1 font-bold text-gray-900">
-                #{bookingId}
-              </span>
-            </p>
-          )}
+        </div>
 
-          {/* STATUS */}
+        {/* CARD */}
 
-          <div className="mt-5">
-            <span
-              className={`inline-flex rounded-full px-4 py-2 text-xs font-bold uppercase ${
-                isConfirmed
-                  ? "bg-green-100 text-green-700"
-                  : "bg-yellow-100 text-yellow-700"
-              }`}
-            >
-              {bookingStatus}
-            </span>
-          </div>
+        <div className="mt-10 overflow-hidden rounded-[30px] bg-white shadow-xl">
 
-        </section>
+          <img
+            src={image}
+            alt={propertyTitle}
+            className="h-64 w-full object-cover"
+          />
 
-        {/* =================================================
-            PROPERTY DETAILS
-        ================================================= */}
+          <div className="p-6 sm:p-8">
 
-        <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+            <h2 className="text-2xl font-bold text-gray-900">
+              {propertyTitle}
+            </h2>
 
-          <div className="flex gap-5">
+            {city && (
+              <p className="mt-2 flex items-center gap-2 text-sm text-gray-500">
 
-            {propertyImage ? (
-              <img
-                src={propertyImage}
-                alt={propertyName}
-                className="h-28 w-28 rounded-2xl object-cover"
-              />
-            ) : (
-              <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-2xl bg-gray-100">
-                <Home
-                  size={35}
-                  className="text-gray-400"
-                />
-              </div>
+                <MapPin size={16} />
+
+                {city}
+
+              </p>
             )}
 
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">
-                {propertyName}
-              </h2>
+            {/* DETAILS */}
 
-              {propertyCity && (
-                <p className="mt-2 text-sm text-gray-500">
-                  {propertyCity}
-                </p>
-              )}
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
 
-              {booking?.property_id && (
-                <p className="mt-2 text-xs text-gray-400">
-                  Property ID: {booking.property_id}
-                </p>
-              )}
-            </div>
+              <div className="rounded-2xl bg-gray-50 p-4">
 
-          </div>
+                <CalendarDays
+                  size={20}
+                  className="text-[#123d78]"
+                />
 
-          {/* =================================================
-              TRIP DETAILS
-          ================================================= */}
-
-          <div className="mt-8 grid gap-5 border-t pt-6 sm:grid-cols-3">
-
-            {/* CHECK IN */}
-
-            <div className="flex gap-3">
-              <CalendarDays
-                size={21}
-                className="text-gray-700"
-              />
-
-              <div>
-                <p className="text-xs text-gray-500">
+                <p className="mt-3 text-xs font-semibold text-gray-500">
                   Check-in
                 </p>
 
-                <p className="mt-1 font-semibold text-gray-900">
-                  {checkIn || "-"}
+                <p className="mt-1 text-sm font-bold text-gray-900">
+                  {formatDate(
+                    checkIn
+                  )}
                 </p>
+
               </div>
-            </div>
 
-            {/* CHECK OUT */}
+              <div className="rounded-2xl bg-gray-50 p-4">
 
-            <div className="flex gap-3">
-              <CalendarDays
-                size={21}
-                className="text-gray-700"
-              />
+                <CalendarDays
+                  size={20}
+                  className="text-[#123d78]"
+                />
 
-              <div>
-                <p className="text-xs text-gray-500">
+                <p className="mt-3 text-xs font-semibold text-gray-500">
                   Check-out
                 </p>
 
-                <p className="mt-1 font-semibold text-gray-900">
-                  {checkOut || "-"}
+                <p className="mt-1 text-sm font-bold text-gray-900">
+                  {formatDate(
+                    checkOut
+                  )}
                 </p>
+
               </div>
-            </div>
 
-            {/* GUESTS */}
+              <div className="rounded-2xl bg-gray-50 p-4">
 
-            <div className="flex gap-3">
-              <Users
-                size={21}
-                className="text-gray-700"
-              />
+                <Users
+                  size={20}
+                  className="text-[#123d78]"
+                />
 
-              <div>
-                <p className="text-xs text-gray-500">
+                <p className="mt-3 text-xs font-semibold text-gray-500">
                   Guests
                 </p>
 
-                <p className="mt-1 font-semibold text-gray-900">
+                <p className="mt-1 text-sm font-bold text-gray-900">
                   {guestCount}
                 </p>
+
               </div>
+
+            </div>
+
+            {/* TOTAL */}
+
+            <div className="mt-8 flex items-center justify-between border-t border-gray-200 pt-6">
+
+              <span className="text-base font-semibold text-gray-600">
+                Total amount
+              </span>
+
+              <span className="text-2xl font-bold text-gray-900">
+                ₹
+                {formatPrice(
+                  totalAmount
+                )}
+              </span>
+
+            </div>
+
+            {/* BUTTONS */}
+
+            <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(
+                    "/bookings"
+                  )
+                }
+                className="flex items-center justify-center gap-2 rounded-2xl border-2 border-[#123d78] px-5 py-3.5 text-sm font-bold text-[#123d78] hover:bg-[#123d78] hover:text-white"
+              >
+                My bookings
+                <ArrowRight
+                  size={17}
+                />
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  navigate("/")
+                }
+                className="flex items-center justify-center gap-2 rounded-2xl bg-[#123d78] px-5 py-3.5 text-sm font-bold text-white hover:bg-[#0d2f60]"
+              >
+                Continue exploring
+                <ArrowRight
+                  size={17}
+                />
+              </button>
+
             </div>
 
           </div>
 
-          {/* =================================================
-              TOTAL
-          ================================================= */}
+        </div>
 
-          <div className="mt-6 flex items-center justify-between border-t pt-6">
+      </div>
 
-            <span className="font-semibold text-gray-900">
-              Total amount
-            </span>
-
-            <span className="text-2xl font-bold text-gray-900">
-              {currency === "INR" ? "₹" : currency}{" "}
-              {Number(totalAmount).toLocaleString(
-                "en-IN"
-              )}
-            </span>
-
-          </div>
-
-          {/* =================================================
-              BOOKING METHOD
-          ================================================= */}
-
-          {booking?.booking_method && (
-            <div className="mt-4 flex items-center justify-between text-sm">
-              <span className="text-gray-500">
-                Booking method
-              </span>
-
-              <span className="font-semibold capitalize text-gray-900">
-                {booking.booking_method}
-              </span>
-            </div>
-          )}
-
-          {/* =================================================
-              SPECIAL REQUEST
-          ================================================= */}
-
-          {booking?.special_request && (
-            <div className="mt-5 rounded-2xl bg-gray-50 p-4">
-
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Special request
-              </p>
-
-              <p className="mt-2 text-sm text-gray-700">
-                {booking.special_request}
-              </p>
-
-            </div>
-          )}
-
-        </section>
-
-        {/* =================================================
-            ACTION
-        ================================================= */}
-
-        <button
-          type="button"
-          onClick={() => navigate("/")}
-          className="mt-6 w-full rounded-xl bg-[#e61e4d] px-6 py-4 font-semibold text-white transition hover:bg-[#d91545]"
-        >
-          Continue exploring
-        </button>
-
-      </main>
     </div>
   );
 }
